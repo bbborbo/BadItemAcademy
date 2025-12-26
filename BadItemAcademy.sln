@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.36128.20
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BadItemAcademy", "BadItemAcademy\BadItemAcademy.csproj", "{28DDA7F7-4A8E-4E77-BCC4-9E01413CB9FF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{28DDA7F7-4A8E-4E77-BCC4-9E01413CB9FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28DDA7F7-4A8E-4E77-BCC4-9E01413CB9FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28DDA7F7-4A8E-4E77-BCC4-9E01413CB9FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28DDA7F7-4A8E-4E77-BCC4-9E01413CB9FF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0A2F93F7-ECD5-42AC-A01A-4B4A6834930C}
+	EndGlobalSection
+EndGlobal
