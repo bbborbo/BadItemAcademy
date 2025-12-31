@@ -24,8 +24,8 @@ namespace BadItemAcademy
     public class BadItemAcademyPlugin : BaseUnityPlugin
     {
         public const string guid = "com." + teamName + "." + modName;
-        public const string teamName = "RiskOfBrainrot";
-        public const string modName = "BadItemAcademy";
+        public const string teamName = "BadItemCouncil";
+        public const string modName = "BadItemRehabilitation";
         public const string version = "1.0.0";
 
         private static bool _PoolHealingBeforeModifiers = true;
