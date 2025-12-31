@@ -37,6 +37,7 @@ namespace BadItemAcademy
         private static float _NkuhanaProcCoefficient = 1.0f; //0.2
         private static float _NkuhanaMaxRange = 80f; //40
         private static bool _ChangeNkuhanaHealthCalculation = true;
+        private static bool _ShouldBenthicWeighSelection = true;
         private static bool _InvertBenthicWeightedSelection = true;
 
         internal static ConfigFile CustomConfigFile { get; set; }
@@ -48,6 +49,7 @@ namespace BadItemAcademy
         private static ConfigEntry<float> NkuhanaProcCoefficient { get; set; }
         private static ConfigEntry<float> NkuhanaMaxRange { get; set; }
         private static ConfigEntry<bool> ChangeNkuhanaHealthCalculation { get; set; }
+        private static ConfigEntry<bool> ShouldBenthicWeighSelection { get; set; }
         private static ConfigEntry<bool> InvertBenthicWeightedSelection { get; set; }
 
 
@@ -62,7 +64,8 @@ namespace BadItemAcademy
                 IL.RoR2.HealthComponent.Heal += HealthComponent_Heal;
             IL.RoR2.HealthComponent.ServerFixedUpdate += NkuhanasBuff;
 
-            IL.RoR2.CharacterMaster.TryCloverVoidUpgrades += CloverWeightedSelection;
+            if(ShouldBenthicWeighSelection.Value)
+                IL.RoR2.CharacterMaster.TryCloverVoidUpgrades += CloverWeightedSelection;
 
             LanguageAPI.Add("ITEM_NOVAONHEAL_DESC",
                 $"Store <style=cIsHealing>100%</style> <style=cStack>(+100% per stack)</style> of healing as <style=cIsHealing>Soul Energy</style>. " +
@@ -146,6 +149,14 @@ namespace BadItemAcademy
             string section = "Bad Item Rehabilitation : ";
 
             CustomConfigFile = new ConfigFile(Paths.ConfigPath + $"\\{modName}.cfg", true);
+            ShouldBenthicWeighSelection = CustomConfigFile.Bind(
+                section + "Benthic Bloom",
+                "Should Benthic Bloom Weigh Selection?",
+                _ShouldBenthicWeighSelection,
+                "Vanilla is FALSE. If set to TRUE, Benthic Bloom will be biased towards selecting item stacks with higher lower values. " +
+                    "Otherwise, it will prefer item stacks with higher values. " +
+                    "Neither of these options resemble vanilla behavior, but you can choose to configure it anyways!"
+                );
             InvertBenthicWeightedSelection = CustomConfigFile.Bind(
                 section + "Benthic Bloom",
                 "Invert Benthic Bloom Weighted Selection",
@@ -158,7 +169,7 @@ namespace BadItemAcademy
                 section + "NKuhanas Opinion",
                 "Pool Healing Before Modifiers (Affects Corpsebloom)",
                 _PoolHealingBeforeModifiers,
-                "If set to TRUE, Nkuhanas Opinion and Corpsebloom will be changed " +
+                "Vanilla is FALSE. If set to TRUE, Nkuhanas Opinion and Corpsebloom will be changed " +
                     "to pool their healing before other healing modifiers. " +
                     "In Corpsebloom's case, this removes the double dipping effect with Rejuvenation Rack and Eclipse 5."
                 );
@@ -173,7 +184,7 @@ namespace BadItemAcademy
                 section + "NKuhanas Opinion",
                 "Change NKuhana Base Damage Calculation",
                 _ChangeNkuhanaHealthCalculation,
-                "If set to TRUE, Nkuhanas Opinion will calculate the base damage of its attacks " +
+                "Vanilla is FALSE. If set to TRUE, Nkuhanas Opinion will calculate the base damage of its attacks " +
                     "by using your survivor's base health (scaled with level) rather than max health. "
                 );
             NkuhanaDamageMultiplier = CustomConfigFile.Bind(
