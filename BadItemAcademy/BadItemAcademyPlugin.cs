@@ -12,10 +12,17 @@ using RoR2.Projectile;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
+using System.Security.Permissions;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 
+#pragma warning disable CS0618 // Type or member is obsolete
+[assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
+#pragma warning restore CS0618 // Type or member is obsolete
+[module: UnverifiableCode]
+#pragma warning disable 
 namespace BadItemAcademy
 {
     [BepInDependency(R2API.LanguageAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
@@ -88,7 +95,7 @@ namespace BadItemAcademy
             ILCursor c = new ILCursor(il);
 
             bool b = c.TryGotoNext(MoveType.Before,
-                x => x.MatchCallOrCallvirt(nameof(Util), nameof(Util.ShuffleList))
+                x => x.MatchCallOrCallvirt("RoR2.Util", nameof(Util.ShuffleList))
                 );
             if (!b)
             {
@@ -99,48 +106,62 @@ namespace BadItemAcademy
             c.Emit(OpCodes.Ldarg_0);
             c.EmitDelegate<Action<List<ItemIndex>, Xoroshiro128Plus, CharacterMaster>>(
                 (itemList, rng, master) => 
-                CreateShuffledListFromWeightedSelection(itemList, rng, master));
-
-            void CreateShuffledListFromWeightedSelection(List<ItemIndex> list, Xoroshiro128Plus rng, CharacterMaster master)
+                CreateShuffledListFromWeightedSelection(ref itemList, rng, master));
+        }
+        public static void CreateShuffledListFromWeightedSelection(ref List<ItemIndex> list, Xoroshiro128Plus rng, CharacterMaster master)
+        {
+            if (master.inventory == null
+                || master.inventory.GetItemCountEffective(DLC1Content.Items.CloverVoid.itemIndex) <= 0
+                || list == null || list.Count < 0)
             {
-                if (master.inventory == null || list == null || list.Count < 0)
-                {
-                    Util.ShuffleList(list, rng);
-                    return;
-                }
+                Debug.Log("Could not create a list from weighted selection: No Items");
+                return;
+            }
 
-                WeightedSelection<ItemIndex> weightedSelection = new WeightedSelection<ItemIndex>(list.Count);
-                foreach (ItemIndex itemIndex in list)
-                {
-                    ItemDef itemDef = ItemCatalog.GetItemDef(itemIndex);
-                    if (itemDef == null || !itemDef.canRemove == false)
-                        continue;
-                    if (itemDef.tier != ItemTier.Tier1 && itemDef.tier != ItemTier.Tier2)
-                        continue;
+            Debug.LogError("uuuuu");
+            int itemCountCommon = master.inventory.GetTotalItemCountOfTier(ItemTier.Tier1);
+            int itemCountUncommon = master.inventory.GetTotalItemCountOfTier(ItemTier.Tier2);
+            if (itemCountCommon + itemCountUncommon == 0)
+            {
+                Debug.Log("Could not create a list from weighted selection: No Tier 1/2 Items");
+                return;
+            }
+            WeightedSelection<ItemIndex> weightedSelection = new WeightedSelection<ItemIndex>(list.Count);
+            foreach (ItemIndex itemIndex in list)
+            {
+                ItemDef itemDef = ItemCatalog.GetItemDef(itemIndex);
+                if (itemDef == null || itemDef.canRemove == false)
+                    continue;
 
-                    int countInInventory = master.inventory.GetItemCountPermanent(itemDef);
-                    if (countInInventory <= 0)
+                int baseWeightStrength = 1;
+                switch (itemDef.tier)
+                {
+                    default:
                         continue;
-                    float weightInverse = 1 / countInInventory;
-                    weightedSelection.AddChoice(itemIndex, InvertBenthicWeightedSelection.Value ? countInInventory : weightInverse);
-                }
-                if(weightedSelection.Capacity == 0)
-                {
-                    Util.ShuffleList(list, rng);
-                    return;
-                }
-
-                list = new List<ItemIndex>();
-                int total = weightedSelection.Capacity;
-                for (int i = 0; i < total; i++)
-                {
-                    if (weightedSelection.Capacity <= 0)
+                    case ItemTier.Tier1:
+                        baseWeightStrength = itemCountUncommon / (itemCountCommon + itemCountUncommon);
                         break;
-                    int index = weightedSelection.EvaluateToChoiceIndex(rng.nextNormalizedFloat);
-                    WeightedSelection<ItemIndex>.ChoiceInfo choice = weightedSelection.choices[index];
-                    list.Add(choice.value);
-                    weightedSelection.RemoveChoice(index);
+                    case ItemTier.Tier2:
+                        baseWeightStrength = itemCountCommon / (itemCountCommon + itemCountUncommon);
+                        break;
                 }
+
+                int countInInventory = master.inventory.GetItemCountEffective(itemIndex);
+                float weightInverse = 1 / countInInventory;
+                float weightUncompensated = InvertBenthicWeightedSelection.Value ? weightInverse : countInInventory;
+                weightedSelection.AddChoice(itemIndex, weightUncompensated * baseWeightStrength);
+            }
+
+            list = new List<ItemIndex>(weightedSelection.Count);
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (weightedSelection.Count <= 0 || weightedSelection.totalWeight == 0)
+                    break;
+                int index = weightedSelection.EvaluateToChoiceIndex(rng.nextNormalizedFloat);
+                if (index >= weightedSelection.Count)
+                    continue;
+                list[i] = weightedSelection.choices[index].value;
+                weightedSelection.ModifyChoiceWeight(index, 0);
             }
         }
 
