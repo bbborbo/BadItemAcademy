@@ -10,6 +10,7 @@ using RoR2.ContentManagement;
 using RoR2.Orbs;
 using RoR2.Projectile;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -36,6 +37,7 @@ namespace BadItemAcademy
         private static float _NkuhanaProcCoefficient = 1.0f; //0.2
         private static float _NkuhanaMaxRange = 80f; //40
         private static bool _ChangeNkuhanaHealthCalculation = true;
+        private static bool _InvertBenthicWeightedSelection = true;
 
         internal static ConfigFile CustomConfigFile { get; set; }
         private static ConfigEntry<bool> PoolHealingBeforeModifiers { get; set; }
@@ -46,6 +48,8 @@ namespace BadItemAcademy
         private static ConfigEntry<float> NkuhanaProcCoefficient { get; set; }
         private static ConfigEntry<float> NkuhanaMaxRange { get; set; }
         private static ConfigEntry<bool> ChangeNkuhanaHealthCalculation { get; set; }
+        private static ConfigEntry<bool> InvertBenthicWeightedSelection { get; set; }
+
 
         void Awake()
         {
@@ -57,6 +61,8 @@ namespace BadItemAcademy
             if (PoolHealingBeforeModifiers.Value)
                 IL.RoR2.HealthComponent.Heal += HealthComponent_Heal;
             IL.RoR2.HealthComponent.ServerFixedUpdate += NkuhanasBuff;
+
+            IL.RoR2.CharacterMaster.TryCloverVoidUpgrades += CloverWeightedSelection;
 
             LanguageAPI.Add("ITEM_NOVAONHEAL_DESC",
                 $"Store <style=cIsHealing>100%</style> <style=cStack>(+100% per stack)</style> of healing as <style=cIsHealing>Soul Energy</style>. " +
@@ -74,11 +80,80 @@ namespace BadItemAcademy
                 $"<style=cIsVoid>Corrupts all Runald's and Kjaro's Bands</style>.");
         }
 
+        private void CloverWeightedSelection(ILContext il)
+        {
+            ILCursor c = new ILCursor(il);
+
+            bool b = c.TryGotoNext(MoveType.Before,
+                x => x.MatchCallOrCallvirt(nameof(Util), nameof(Util.ShuffleList))
+                );
+            if (!b)
+            {
+                DebugBreakpoint(nameof(CloverWeightedSelection));
+                return;
+            }
+            c.Remove();
+            c.Emit(OpCodes.Ldarg_0);
+            c.EmitDelegate<Action<List<ItemIndex>, Xoroshiro128Plus, CharacterMaster>>(
+                (itemList, rng, master) => 
+                CreateShuffledListFromWeightedSelection(itemList, rng, master));
+
+            void CreateShuffledListFromWeightedSelection(List<ItemIndex> list, Xoroshiro128Plus rng, CharacterMaster master)
+            {
+                if (master.inventory == null || list == null || list.Count < 0)
+                {
+                    Util.ShuffleList(list, rng);
+                    return;
+                }
+
+                WeightedSelection<ItemIndex> weightedSelection = new WeightedSelection<ItemIndex>(list.Count);
+                foreach (ItemIndex itemIndex in list)
+                {
+                    ItemDef itemDef = ItemCatalog.GetItemDef(itemIndex);
+                    if (itemDef == null || !itemDef.canRemove == false)
+                        continue;
+                    if (itemDef.tier != ItemTier.Tier1 && itemDef.tier != ItemTier.Tier2)
+                        continue;
+
+                    int countInInventory = master.inventory.GetItemCountPermanent(itemDef);
+                    if (countInInventory <= 0)
+                        continue;
+                    float weightInverse = 1 / countInInventory;
+                    weightedSelection.AddChoice(itemIndex, InvertBenthicWeightedSelection.Value ? countInInventory : weightInverse);
+                }
+                if(weightedSelection.Capacity == 0)
+                {
+                    Util.ShuffleList(list, rng);
+                    return;
+                }
+
+                list = new List<ItemIndex>();
+                int total = weightedSelection.Capacity;
+                for (int i = 0; i < total; i++)
+                {
+                    if (weightedSelection.Capacity <= 0)
+                        break;
+                    int index = weightedSelection.EvaluateToChoiceIndex(rng.nextNormalizedFloat);
+                    WeightedSelection<ItemIndex>.ChoiceInfo choice = weightedSelection.choices[index];
+                    list.Add(choice.value);
+                    weightedSelection.RemoveChoice(index);
+                }
+            }
+        }
+
         private static void DoConfig()
         {
-            string section = "Bad Item Academy : ";
+            string section = "Bad Item Rehabilitation : ";
 
             CustomConfigFile = new ConfigFile(Paths.ConfigPath + $"\\{modName}.cfg", true);
+            InvertBenthicWeightedSelection = CustomConfigFile.Bind(
+                section + "Benthic Bloom",
+                "Invert Benthic Bloom Weighted Selection",
+                _InvertBenthicWeightedSelection,
+                "If set to TRUE, Benthic Bloom will be biased towards selecting item stacks with lower values. " +
+                    "Otherwise, it will prefer item stacks with higher values. " +
+                    "Neither of these options resemble vanilla behavior, but you can choose to configure it anyways!"
+                );
             PoolHealingBeforeModifiers = CustomConfigFile.Bind(
                 section + "NKuhanas Opinion",
                 "Pool Healing Before Modifiers (Affects Corpsebloom)",
