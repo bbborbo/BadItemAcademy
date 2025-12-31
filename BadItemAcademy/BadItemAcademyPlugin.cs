@@ -114,16 +114,14 @@ namespace BadItemAcademy
                 || master.inventory.GetItemCountEffective(DLC1Content.Items.CloverVoid.itemIndex) <= 0
                 || list == null || list.Count < 0)
             {
-                Debug.Log("Could not create a list from weighted selection: No Items");
                 return;
             }
 
-            Debug.LogError("uuuuu");
             int itemCountCommon = master.inventory.GetTotalItemCountOfTier(ItemTier.Tier1);
             int itemCountUncommon = master.inventory.GetTotalItemCountOfTier(ItemTier.Tier2);
             if (itemCountCommon + itemCountUncommon == 0)
             {
-                Debug.Log("Could not create a list from weighted selection: No Tier 1/2 Items");
+                Debug.Log("Could not create a Benthic weighted selection: No Tier 1/2 Items");
                 return;
             }
             WeightedSelection<ItemIndex> weightedSelection = new WeightedSelection<ItemIndex>(list.Count);
