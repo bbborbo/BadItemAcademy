@@ -182,10 +182,15 @@ namespace BadItemAcademy
         private void BuffNkuhanaProcCoefficient(ILCursor c)
         {
             int index = 9;
-            bool b4 = c.TryGotoNext(MoveType.After,
+            bool b = c.TryGotoNext(MoveType.After,
                 x => x.MatchNewobj<DevilOrb>(),
                 x => x.MatchStloc(out index)
                 );
+            if (!b)
+            {
+                DebugBreakpoint(nameof(BuffNkuhanaProcCoefficient));
+                return;
+            }
             c.Emit(OpCodes.Ldloc, index);
             c.EmitDelegate<Action<DevilOrb>>((devilOrb) =>
             {
@@ -201,7 +206,7 @@ namespace BadItemAcademy
                 );
             if (!b3)
             {
-                DebugBreakpoint(nameof(NkuhanasBuff), 3);
+                DebugBreakpoint(nameof(BuffNkuhanaRange));
                 return;
             }
 
@@ -217,7 +222,7 @@ namespace BadItemAcademy
 
             if (!b2)
             {
-                DebugBreakpoint(nameof(NkuhanasBuff), 2);
+                DebugBreakpoint(nameof(FixNkuahanHealth));
                 return;
             }
 
@@ -241,7 +246,7 @@ namespace BadItemAcademy
 
             if (!b1)
             {
-                DebugBreakpoint(nameof(NkuhanasBuff), 1);
+                DebugBreakpoint(nameof(BuffNkuhanaDamage));
                 return;
             }
             c.Index -= 2;
