@@ -29,7 +29,7 @@ namespace BadItemAcademy
 
     [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.EveryoneNeedSameModVersion)]
     [BepInPlugin(guid, modName, version)]
-    public class BadItemAcademyPlugin : BaseUnityPlugin
+    public partial class BadItemAcademyPlugin : BaseUnityPlugin
     {
         public const string guid = "com." + teamName + "." + modName;
         public const string teamName = "BadItemCouncil";
@@ -46,6 +46,7 @@ namespace BadItemAcademy
         private static bool _ChangeNkuhanaHealthCalculation = true;
         private static bool _ShouldBenthicWeighSelection = true;
         private static bool _InvertBenthicWeightedSelection = true;
+        private static bool _BiasBenthicWeightedSelection = true;
 
         internal static ConfigFile CustomConfigFile { get; set; }
         private static ConfigEntry<bool> PoolHealingBeforeModifiers { get; set; }
@@ -58,111 +59,17 @@ namespace BadItemAcademy
         private static ConfigEntry<bool> ChangeNkuhanaHealthCalculation { get; set; }
         private static ConfigEntry<bool> ShouldBenthicWeighSelection { get; set; }
         private static ConfigEntry<bool> InvertBenthicWeightedSelection { get; set; }
+        private static ConfigEntry<bool> BiasBenthicWeightedSelection { get; set; }
 
 
         void Awake()
         {
             DoConfig();
 
-            AssetReferenceT<GameObject> refSnowballProjectile = new AssetReferenceT<GameObject>(RoR2BepInExPack.GameAssetPathsBetter.RoR2_DLC1_ElementalRingVoid.ElementalRingVoidBlackHole_prefab);
-            AssetAsyncReferenceManager<GameObject>.LoadAsset(refSnowballProjectile).Completed += LoadVoidBandBlast;
-
-            if (PoolHealingBeforeModifiers.Value)
-                IL.RoR2.HealthComponent.Heal += HealthComponent_Heal;
-            IL.RoR2.HealthComponent.ServerFixedUpdate += NkuhanasBuff;
-
-            if(ShouldBenthicWeighSelection.Value)
-                IL.RoR2.CharacterMaster.TryCloverVoidUpgrades += CloverWeightedSelection;
-
-            LanguageAPI.Add("ITEM_NOVAONHEAL_DESC",
-                $"Store <style=cIsHealing>100%</style> <style=cStack>(+100% per stack)</style> of healing as <style=cIsHealing>Soul Energy</style>. " +
-                $"After your <style=cIsHealing>Soul Energy</style> reaches <style=cIsHealing>10%</style> of your " +
-                (ChangeNkuhanaHealthCalculation.Value ? $"<style=cIsHealing>base health</style>, " : $"<style=cIsHealing>maximum health</style>, ") +
-                $"<style=cIsDamage>fire a skull</style> that deals <style=cIsDamage>{NkuhanaDamageMultiplier.Value * 100}%</style> " +
-                $"of your <style=cIsHealing>Soul Energy</style> as <style=cIsDamage>damage</style>.");
-            LanguageAPI.Add("ITEM_ELEMENTALRINGVOID_DESC",
-                $"Hits that deal <style=cIsDamage>more than 400% damage</style> also fire a black hole that " +
-                $"<style=cIsUtility>draws enemies within 15m into its center</style>. " +
-                $"Lasts <style=cIsUtility>5</style> seconds before collapsing, " +
-                $"dealing <style=cIsDamage>{100 * VoidBandDamageMult.Value}%</style> " +
-                $"<style=cStack>(+{100 * VoidBandDamageMult.Value} per stack)</style> TOTAL damage. " +
-                $"Recharges every <style=cIsUtility>20</style> seconds. " +
-                $"<style=cIsVoid>Corrupts all Runald's and Kjaro's Bands</style>.");
+            RehabNkuhanas();
+            RehabSingularityBand();
+            RehabBenthic();
         }
-
-        private void CloverWeightedSelection(ILContext il)
-        {
-            ILCursor c = new ILCursor(il);
-
-            bool b = c.TryGotoNext(MoveType.Before,
-                x => x.MatchCallOrCallvirt("RoR2.Util", nameof(Util.ShuffleList))
-                );
-            if (!b)
-            {
-                DebugBreakpoint(nameof(CloverWeightedSelection));
-                return;
-            }
-            c.Remove();
-            c.Emit(OpCodes.Ldarg_0);
-            c.EmitDelegate<Action<List<ItemIndex>, Xoroshiro128Plus, CharacterMaster>>(
-                (itemList, rng, master) => 
-                CreateShuffledListFromWeightedSelection(ref itemList, rng, master));
-        }
-        public static void CreateShuffledListFromWeightedSelection(ref List<ItemIndex> list, Xoroshiro128Plus rng, CharacterMaster master)
-        {
-            if (master.inventory == null
-                || master.inventory.GetItemCountEffective(DLC1Content.Items.CloverVoid.itemIndex) <= 0
-                || list == null || list.Count < 0)
-            {
-                return;
-            }
-
-            int itemCountCommon = master.inventory.GetTotalItemCountOfTier(ItemTier.Tier1);
-            int itemCountUncommon = master.inventory.GetTotalItemCountOfTier(ItemTier.Tier2);
-            if (itemCountCommon + itemCountUncommon == 0)
-            {
-                Debug.Log("Could not create a Benthic weighted selection: No Tier 1/2 Items");
-                return;
-            }
-            WeightedSelection<ItemIndex> weightedSelection = new WeightedSelection<ItemIndex>(list.Count);
-            foreach (ItemIndex itemIndex in list)
-            {
-                ItemDef itemDef = ItemCatalog.GetItemDef(itemIndex);
-                if (itemDef == null || itemDef.canRemove == false)
-                    continue;
-
-                int baseWeightStrength = 1;
-                switch (itemDef.tier)
-                {
-                    default:
-                        continue;
-                    case ItemTier.Tier1:
-                        baseWeightStrength = itemCountUncommon / (itemCountCommon + itemCountUncommon);
-                        break;
-                    case ItemTier.Tier2:
-                        baseWeightStrength = itemCountCommon / (itemCountCommon + itemCountUncommon);
-                        break;
-                }
-
-                int countInInventory = master.inventory.GetItemCountEffective(itemIndex);
-                float weightInverse = 1 / countInInventory;
-                float weightUncompensated = InvertBenthicWeightedSelection.Value ? weightInverse : countInInventory;
-                weightedSelection.AddChoice(itemIndex, weightUncompensated * baseWeightStrength);
-            }
-
-            list = new List<ItemIndex>(weightedSelection.Count);
-            for (int i = 0; i < list.Count; i++)
-            {
-                if (weightedSelection.Count <= 0 || weightedSelection.totalWeight == 0)
-                    break;
-                int index = weightedSelection.EvaluateToChoiceIndex(rng.nextNormalizedFloat);
-                if (index >= weightedSelection.Count)
-                    continue;
-                list[i] = weightedSelection.choices[index].value;
-                weightedSelection.ModifyChoiceWeight(index, 0);
-            }
-        }
-
         private static void DoConfig()
         {
             string section = "Bad Item Rehabilitation : ";
@@ -182,7 +89,17 @@ namespace BadItemAcademy
                 _InvertBenthicWeightedSelection,
                 "If set to TRUE, Benthic Bloom will be biased towards selecting item stacks with lower values. " +
                     "Otherwise, it will prefer item stacks with higher values. " +
-                    "Neither of these options resemble vanilla behavior, but you can choose to configure it anyways!"
+                    "Neither of these options resemble vanilla behavior, so do what you want!"
+                );
+            BiasBenthicWeightedSelection = CustomConfigFile.Bind(
+                section + "Benthic Bloom",
+                "Bias Benthic Bloom Weighted Selection",
+                _BiasBenthicWeightedSelection,
+                "If set to TRUE, Benthic Bloom will try to maintain equal ratios of upgrades between Common and Uncommon items. " +
+                    "Due to selection weighting, Benthic will more often pick Uncommon-to-Rare upgrades than Common-to-Uncommon due to Uncommon items being harder to stack. " +
+                    "This config presents a choice, if you would like to make Benthic " +
+                    "adjust its weighted selection to account for the size of your inventory or allow it to choose whatever it wants. " +
+                    "Neither of these options resemble vanilla behavior, so do what you want!"
                 );
             PoolHealingBeforeModifiers = CustomConfigFile.Bind(
                 section + "NKuhanas Opinion",
@@ -232,7 +149,7 @@ namespace BadItemAcademy
                 "Void Band Damage Coefficient",
                 _VoidBandDamageMult,
                 "Vanilla is 1. Determines the damage multiplier of the explosion from the black hole " +
-                    "created by Singularity Band. Scales linearly, represented as a percent. " 
+                    "created by Singularity Band. Scales linearly, represented as a percent. "
                 );
             VoidBandProcCoeff = CustomConfigFile.Bind(
                 section + "Singularity Band",
@@ -243,360 +160,13 @@ namespace BadItemAcademy
                 );
         }
 
+
         public static void DebugBreakpoint(string methodName, int breakpointNumber = -1)
         {
             string s = $"({modName}) {methodName} IL hook failed!";
             if (breakpointNumber >= 0)
                 s += $" (breakpoint {breakpointNumber})";
             Debug.LogError(s);
-        }
-
-        #region idc
-        private void LoadVoidBandBlast(AsyncOperationHandle<GameObject> obj)
-        {
-            GameObject prefab = obj.Result;
-
-            ProjectileExplosion explosion = prefab.GetComponent<ProjectileExplosion>();
-            if (explosion)
-            {
-                explosion.blastProcCoefficient = VoidBandProcCoeff.Value;
-                explosion.blastDamageCoefficient = VoidBandDamageMult.Value;
-            }
-        }
-        private void NkuhanasBuff(ILContext il)
-        {
-            ILCursor c = new ILCursor(il);
-
-            bool b0 = c.TryGotoNext(MoveType.After,
-                x => x.MatchLdfld<HealthComponent>(nameof(HealthComponent.devilOrbHealPool))
-                );
-            int index = c.Index;
-
-            BuffNkuhanaDamage(c);
-            if (ChangeNkuhanaHealthCalculation.Value)
-            {
-                c.Index = index;
-                FixNkuahanHealth(c);
-            }
-            c.Index = index;
-            BuffNkuhanaRange(c);
-            c.Index = index;
-            BuffNkuhanaProcCoefficient(c);
-        }
-
-        private void BuffNkuhanaProcCoefficient(ILCursor c)
-        {
-            int index = 9;
-            bool b = c.TryGotoNext(MoveType.After,
-                x => x.MatchNewobj<DevilOrb>(),
-                x => x.MatchStloc(out index)
-                );
-            if (!b)
-            {
-                DebugBreakpoint(nameof(BuffNkuhanaProcCoefficient));
-                return;
-            }
-            c.Emit(OpCodes.Ldloc, index);
-            c.EmitDelegate<Action<DevilOrb>>((devilOrb) =>
-            {
-                devilOrb.procCoefficient = NkuhanaProcCoefficient.Value;
-            });
-        }
-
-        private void BuffNkuhanaRange(ILCursor c)
-        {
-            bool b3 = c.TryGotoNext(MoveType.Before,
-                x => x.MatchLdcR4(out _),
-                x => x.MatchCallOrCallvirt<DevilOrb>(nameof(DevilOrb.PickNextTarget))
-                );
-            if (!b3)
-            {
-                DebugBreakpoint(nameof(BuffNkuhanaRange));
-                return;
-            }
-
-            c.Remove();
-            c.Emit(OpCodes.Ldc_R4, NkuhanaMaxRange.Value);
-        }
-
-        private void FixNkuahanHealth(ILCursor c)
-        {
-            bool b2 = c.TryGotoNext(MoveType.Before,
-                x => x.MatchCallOrCallvirt<HealthComponent>("get_fullCombinedHealth")
-                );
-
-            if (!b2)
-            {
-                DebugBreakpoint(nameof(FixNkuahanHealth));
-                return;
-            }
-
-            c.Remove();
-            c.EmitDelegate<Func<HealthComponent, float>>((hc) =>
-            {
-                CharacterBody body = hc.body;
-                if (!body)
-                    return hc.fullCombinedHealth;
-                float level = body.level - 1;
-                float baseMaxHealth = body.baseMaxHealth + body.baseMaxShield + ((body.levelMaxHealth + body.levelMaxShield) * level);
-                return baseMaxHealth;
-            });
-        }
-
-        private void BuffNkuhanaDamage(ILCursor c)
-        {
-            bool b1 = c.TryGotoNext(MoveType.Before,
-                x => x.MatchStfld<DevilOrb>(nameof(DevilOrb.damageValue))
-                );
-
-            if (!b1)
-            {
-                DebugBreakpoint(nameof(BuffNkuhanaDamage));
-                return;
-            }
-            c.Index -= 2;
-            c.Remove();
-            c.Emit(OpCodes.Ldc_R4, NkuhanaDamageMultiplier.Value);
-        }
-#endregion
-
-        private void HealthComponent_Heal(ILContext il)
-        {
-            ILCursor c = new ILCursor(il);
-            ILLabel _target = c.DefineLabel();
-            ILLabel target = c.DefineLabel();
-
-            bool labelFound = c.TryGotoNext(MoveType.Before,
-                x => x.MatchLdarg(out _),
-                X => X.MatchLdflda<HealthComponent>(nameof(RoR2.HealthComponent.itemCounts)),
-                x => x.MatchLdfld<HealthComponent.ItemCounts>(nameof(RoR2.HealthComponent.itemCounts.increaseHealing))
-                );
-
-            if (!labelFound)
-            {
-                DebugBreakpoint(nameof(HealthComponent_Heal));
-                return;
-            }
-
-            if (!PoolHealingAfterIncrease.Value ||
-                    c.TryGotoNext(MoveType.After, x => x.MatchBle(out target)) == false
-                )
-            {
-                if (PoolHealingAfterIncrease.Value)
-                    Debug.Log($"({modName}) " +
-                        $"Error: {nameof(PoolHealingAfterIncrease)} is true, but failed to find label. " +
-                        $"Falling back to [{nameof(PoolHealingAfterIncrease)}=false] label.");
-                c.MarkLabel(target);
-            }
-            _target = target;
-
-
-            int opinionWithinTrue = 1;
-            int opinionWithinFalse = 1;
-
-            GetOpinionLabels(c, target, out ILLabel poolStart, out ILLabel poolEnd);
-
-            HyperSwap(c, target, poolStart, poolEnd,
-                out ILLabel newEnd, out ILLabel newStart, out ILLabel newTarget);
-
-            //set the target to the new target label so that what comes after knows its there
-            target = newTarget;
-
-            RedirectAllBranchesToLabel(c, poolEnd, newEnd, opinionWithinTrue, ScreamingInternally.Brtrue);
-            RedirectAllBranchesToLabel(c, poolEnd, newEnd, opinionWithinFalse, ScreamingInternally.Ble);
-
-
-            int corpseWithinTrue = 1;
-            int corpseWithinFalse = 2;
-            int corpseBeforeTrue = 1;
-            int corpseBeforeFalse = 1;
-            //corpsebloom should be second because that puts it first, and corpsebloom can ret
-            GetCorpsebloomLabels(c, target, out poolStart, out poolEnd);
-
-            HyperSwap(c, target, poolStart, poolEnd, 
-                out newEnd, out newStart, out newTarget);
-
-            RedirectAllBranchesToLabel(c, poolEnd, newEnd, corpseWithinTrue, ScreamingInternally.Brtrue);
-            RedirectAllBranchesToLabel(c, poolEnd, newEnd, corpseWithinFalse, ScreamingInternally.Brfalse);
-            RedirectAllBranchesToLabel(c, poolStart, newStart, 1, ScreamingInternally.Blt);
-            RedirectAllBranchesToLabel(c, poolStart, newStart, 1, ScreamingInternally.Bne);
-
-            //this here fixes the if statement before to not skip our newly emitted branches
-            Debug.Log("bia redirecting branches before target to acknowledge inserted code. true search");
-            RedirectAllBranchesToLabel(c, _target, newTarget, 1);
-
-            c.Method.RecalculateILOffsets();
-
-            //Debug.LogWarning(il.ToString());
-        }
-
-        private static void HyperSwap(ILCursor c, ILLabel target, ILLabel poolStart, ILLabel poolEnd, 
-            out ILLabel newEnd, out ILLabel newStart, out ILLabel newTarget)
-        {
-            SwapLabel(c, poolEnd, target, out newEnd);
-
-            SwapLabel(c, poolStart, poolEnd, out newStart);
-
-            SwapLabel(c, target, poolStart, out newTarget);
-        }
-
-        private void GetOpinionLabels(ILCursor c, ILLabel target, out ILLabel poolStart, out ILLabel poolEnd)
-        {
-            poolStart = c.DefineLabel();
-            poolEnd = c.DefineLabel();
-            Debug.Log("bia opinion");
-
-            c.Index = 0;
-
-            //to find the pool start, first go to nova on heal count. this is a unique match
-            bool b1 = c.TryGotoNext(MoveType.Before,
-                x => x.MatchLdarg(out _),
-                X => X.MatchLdflda<HealthComponent>(nameof(RoR2.HealthComponent.itemCounts)),
-                x => x.MatchLdfld<HealthComponent.ItemCounts>(nameof(RoR2.HealthComponent.itemCounts.novaOnHeal))
-                );
-            if (!b1)
-            {
-                DebugBreakpoint(nameof(GetOpinionLabels), 1);
-                return;
-            }
-            c.MarkLabel(poolStart);
-
-            //next go back up to nonRegen==true. this gets the end of the if statement and places us at the start
-            bool b2 = c.TryGotoNext(MoveType.After,
-                x => x.MatchStfld<HealthComponent>(nameof(HealthComponent.devilOrbHealPool))
-                );
-            if (!b2)
-            {
-                DebugBreakpoint(nameof(GetOpinionLabels), 2);
-                return;
-            }
-            c.MarkLabel(poolEnd);
-        }
-        private void GetCorpsebloomLabels(ILCursor c, ILLabel target, out ILLabel poolStart, out ILLabel poolEnd)
-        {
-            poolStart = c.DefineLabel();
-            poolEnd = c.DefineLabel();
-            Debug.Log("bia corpsebloom");
-
-            c.Index = 0;
-
-            //to find the pool start, first go to repeat heal component. this is a unique match
-            bool b1 = c.TryGotoNext(MoveType.Before,
-                x => x.MatchLdfld<HealthComponent>(nameof(RoR2.HealthComponent.repeatHealComponent))
-                );
-            if (!b1)
-            {
-                DebugBreakpoint(nameof(GetCorpsebloomLabels), 1);
-                return;
-            }
-
-            //next go back up to nonRegen==true. this gets the end of the if statement and places us at the start
-            ILLabel end = c.DefineLabel();
-            bool b2 = c.TryGotoPrev(MoveType.Before,
-                x => x.MatchLdarg(out _),
-                x => x.MatchBrfalse(out end)
-                );
-            if (!b2)
-            {
-                DebugBreakpoint(nameof(GetCorpsebloomLabels), 2);
-                return;
-            }
-            poolEnd = end;
-            c.MarkLabel(poolStart);
-        }
-
-        /// <summary>
-        /// "Moves" the logic at the destination label to the location label
-        /// </summary>
-        /// <param name="c">cursor</param>
-        /// <param name="location">the label you want to "move" e.g. the start of a block</param>
-        /// <param name="destination">the destination you want to "move" to e.g. a spot before some other code runs</param>
-        /// <param name="newLabel">a label for the new op code created to act like a "portal". use this to redirect other methods to your new logic</param>
-        private static void SwapLabel(ILCursor c, ILLabel location, ILLabel destination, out ILLabel newLabel)
-        {
-            c.GotoLabel(location, MoveType.Before);
-            c.Emit(OpCodes.Br, destination);
-            c.Index--;
-            newLabel = c.DefineLabel();
-            c.MarkLabel(newLabel);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="c">cursor</param>
-        /// <param name="labelOld">the label to the old instruction that you need to redirect. this is used as a starting point</param>
-        /// <param name="labelNew">the new label that you want branches to point to</param>
-        /// <param name="count">the amount of branches to fix</param>
-        /// <param name="isFalse">whether to check if the branch matches true or false</param>
-        private static void RedirectAllBranchesToLabel(ILCursor c, ILLabel labelOld, ILLabel labelNew, int count, ScreamingInternally screamingInternally = ScreamingInternally.Brfalse)
-        {
-            if (count <= 0)
-                return;
-            c.GotoLabel(labelOld, MoveType.Before);
-
-            bool b3 = true;
-            for(int i = 0; i < count; i++)
-            {
-                OpCode opCode = OpCodes.Nop;
-                switch (screamingInternally)
-                {
-                    default:
-                        b3 = false;
-                        break;
-                    case ScreamingInternally.Brfalse:
-                        opCode = OpCodes.Brfalse_S;
-                        b3 = c.TryGotoPrev(MoveType.Before,
-                            x => x.MatchBrfalse(out _)
-                            );
-                        break;
-                    case ScreamingInternally.Brtrue:
-                        opCode = OpCodes.Brtrue_S;
-                        b3 = c.TryGotoPrev(MoveType.Before,
-                            x => x.MatchBrtrue(out _)
-                            );
-                        break;
-                    case ScreamingInternally.Blt:
-                        opCode = OpCodes.Blt_S;
-                        b3 = c.TryGotoPrev(MoveType.Before,
-                            x => x.MatchBlt(out _)
-                            );
-                        break;
-                    case ScreamingInternally.Bne:
-                        opCode = OpCodes.Bne_Un_S;
-                        b3 = c.TryGotoPrev(MoveType.Before,
-                            x => x.MatchBneUn(out _)
-                            );
-                        break;
-                    case ScreamingInternally.Ble:
-                        opCode = OpCodes.Ble_S;
-                        b3 = c.TryGotoPrev(MoveType.Before,
-                            x => x.MatchBle(out _)
-                            );
-                        break;
-                }
-
-                if (b3 == false)
-                {
-                    Debug.Log("bia redirect exiting");
-                    break;
-                }
-
-                //c.Next.Operand = labelNew;
-                c.Remove();
-                c.Emit(opCode, labelNew);
-                c.Index--;
-                Debug.Log(c.Prev.OpCode.ToString());
-            }
-        }
-
-        enum ScreamingInternally
-        {
-            Brfalse,
-            Brtrue, 
-            Blt,
-            Bne,
-            Ble
         }
     }
 }
