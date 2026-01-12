@@ -34,16 +34,9 @@ namespace BadItemAcademy
         public const string guid = "com." + teamName + "." + modName;
         public const string teamName = "BadItemCouncil";
         public const string modName = "BadItemRehabilitation";
-        public const string version = "1.0.0";
-
-        private static bool _ShouldBenthicWeighSelection = true;
-        private static bool _InvertBenthicWeightedSelection = true;
-        private static bool _BiasBenthicWeightedSelection = true;
+        public const string version = "1.1.0";
 
         internal static ConfigFile CustomConfigFile { get; set; }
-        private static ConfigEntry<bool> ShouldBenthicWeighSelection { get; set; }
-        private static ConfigEntry<bool> InvertBenthicWeightedSelection { get; set; }
-        private static ConfigEntry<bool> BiasBenthicWeightedSelection { get; set; }
         internal static ConfigEntry<bool> PoolHealingBeforeModifiers { get; set; }
         internal static ConfigEntry<bool> PoolHealingAfterIncrease { get; set; }
         internal static ConfigEntry<float> VoidBandDamageMult { get; set; }
@@ -52,6 +45,9 @@ namespace BadItemAcademy
         internal static ConfigEntry<float> NkuhanaProcCoefficient { get; set; }
         internal static ConfigEntry<float> NkuhanaMaxRange { get; set; }
         internal static ConfigEntry<bool> ChangeNkuhanaHealthCalculation { get; set; }
+        internal static ConfigEntry<bool> ShouldBenthicWeighSelection { get; set; }
+        internal static ConfigEntry<bool> InvertBenthicWeightedSelection { get; set; }
+        internal static ConfigEntry<bool> BiasBenthicWeightedSelection { get; set; }
 
 
         void Awake()

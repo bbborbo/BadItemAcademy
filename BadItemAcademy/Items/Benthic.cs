@@ -20,6 +20,10 @@ namespace BadItemAcademy
 {
     public partial class BadItemAcademyPlugin
     {
+        private static bool _ChangeNkuhanaHealthCalculation = true;
+        private static bool _ShouldBenthicWeighSelection = true;
+        private static bool _InvertBenthicWeightedSelection = true;
+        private static bool _BiasBenthicWeightedSelection = true;
         public static void RehabBenthic()
         {
             if (ShouldBenthicWeighSelection.Value)
