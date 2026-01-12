@@ -38,8 +38,6 @@ namespace BadItemAcademy
 
         private static bool _PoolHealingBeforeModifiers = true;
         private static bool _PoolHealingAfterIncrease = false;
-        private static float _VoidBandDamageMult = 2; //1
-        private static float _VoidBandProcCoeff = 2; //1
         private static float _NkuhanaDamageMultiplier = 3.5f; //2.5
         private static float _NkuhanaProcCoefficient = 1.0f; //0.2
         private static float _NkuhanaMaxRange = 80f; //40
@@ -51,8 +49,6 @@ namespace BadItemAcademy
         internal static ConfigFile CustomConfigFile { get; set; }
         private static ConfigEntry<bool> PoolHealingBeforeModifiers { get; set; }
         private static ConfigEntry<bool> PoolHealingAfterIncrease { get; set; }
-        private static ConfigEntry<float> VoidBandDamageMult { get; set; }
-        private static ConfigEntry<float> VoidBandProcCoeff { get; set; }
         private static ConfigEntry<float> NkuhanaDamageMultiplier { get; set; }
         private static ConfigEntry<float> NkuhanaProcCoefficient { get; set; }
         private static ConfigEntry<float> NkuhanaMaxRange { get; set; }
@@ -60,6 +56,8 @@ namespace BadItemAcademy
         private static ConfigEntry<bool> ShouldBenthicWeighSelection { get; set; }
         private static ConfigEntry<bool> InvertBenthicWeightedSelection { get; set; }
         private static ConfigEntry<bool> BiasBenthicWeightedSelection { get; set; }
+        internal static ConfigEntry<float> VoidBandDamageMult { get; set; }
+        internal static ConfigEntry<float> VoidBandProcCoeff { get; set; }
 
 
         void Awake()
@@ -144,6 +142,7 @@ namespace BadItemAcademy
                 "Vanilla is 40. Determines the maximum range of skulls fired " +
                     "by healing with NKuhanas Opinion. Represented in meters."
                 );
+            #region singularity band
             VoidBandDamageMult = CustomConfigFile.Bind(
                 section + "Singularity Band",
                 "Void Band Damage Coefficient",
@@ -158,9 +157,39 @@ namespace BadItemAcademy
                 "Vanilla is 1. Determines the proc effectiveness of the explosion from the black hole " +
                     "created by Singularity Band."
                 );
+            #endregion
         }
 
+        public static AssetReferenceT<T> LoadAsync<T>(string guid, Action<T> callback) where T : UnityEngine.Object
+        {
+            void onCompleted(AsyncOperationHandle<T> handle)
+            {
+                if (!(handle.Result is T) || handle.Status != UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Succeeded)
+                {
+                    Debug.LogError($"Failed to load asset [{handle.DebugName}] : {handle.OperationException}");
+                    return;
+                }
 
+                callback(handle.Result);
+            }
+
+            AssetReferenceT<T> ref1 = new AssetReferenceT<T>(guid);
+            AsyncOperationHandle<T> handle = AssetAsyncReferenceManager<T>.LoadAsset(ref1);
+
+            if (callback == null)
+            {
+                return ref1;
+            }
+
+            if (handle.IsDone)
+            {
+                onCompleted(handle);
+                return ref1;
+            }
+
+            handle.Completed += onCompleted;
+            return ref1;
+        }
         public static void DebugBreakpoint(string methodName, int breakpointNumber = -1)
         {
             string s = $"({modName}) {methodName} IL hook failed!";

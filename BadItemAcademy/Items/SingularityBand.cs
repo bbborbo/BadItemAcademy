@@ -20,10 +20,20 @@ namespace BadItemAcademy
 {
     public partial class BadItemAcademyPlugin
     {
+
+        private static float _VoidBandDamageMult = 2; //1
+        private static float _VoidBandProcCoeff = 2; //1
         public static void RehabSingularityBand()
         {
-            AssetReferenceT<GameObject> refSnowballProjectile = new AssetReferenceT<GameObject>(RoR2BepInExPack.GameAssetPathsBetter.RoR2_DLC1_ElementalRingVoid.ElementalRingVoidBlackHole_prefab);
-            AssetAsyncReferenceManager<GameObject>.LoadAsset(refSnowballProjectile).Completed += LoadVoidBandBlast;
+            LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPathsBetter.RoR2_DLC1_ElementalRingVoid.ElementalRingVoidBlackHole_prefab, (prefab) =>
+            {
+                ProjectileExplosion explosion = prefab.GetComponent<ProjectileExplosion>();
+                if (explosion)
+                {
+                    explosion.blastProcCoefficient = VoidBandProcCoeff.Value;
+                    explosion.blastDamageCoefficient = VoidBandDamageMult.Value;
+                }
+            });
 
             LanguageAPI.Add("ITEM_ELEMENTALRINGVOID_DESC",
                 $"Hits that deal <style=cIsDamage>more than 400% damage</style> also fire a black hole that " +
@@ -33,17 +43,6 @@ namespace BadItemAcademy
                 $"<style=cStack>(+{100 * VoidBandDamageMult.Value} per stack)</style> TOTAL damage. " +
                 $"Recharges every <style=cIsUtility>20</style> seconds. " +
                 $"<style=cIsVoid>Corrupts all Runald's and Kjaro's Bands</style>.");
-        }
-        public static void LoadVoidBandBlast(AsyncOperationHandle<GameObject> obj)
-        {
-            GameObject prefab = obj.Result;
-
-            ProjectileExplosion explosion = prefab.GetComponent<ProjectileExplosion>();
-            if (explosion)
-            {
-                explosion.blastProcCoefficient = VoidBandProcCoeff.Value;
-                explosion.blastDamageCoefficient = VoidBandDamageMult.Value;
-            }
         }
     }
 }
