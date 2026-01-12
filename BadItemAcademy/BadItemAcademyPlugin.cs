@@ -36,28 +36,22 @@ namespace BadItemAcademy
         public const string modName = "BadItemRehabilitation";
         public const string version = "1.0.0";
 
-        private static bool _PoolHealingBeforeModifiers = true;
-        private static bool _PoolHealingAfterIncrease = false;
-        private static float _NkuhanaDamageMultiplier = 3.5f; //2.5
-        private static float _NkuhanaProcCoefficient = 1.0f; //0.2
-        private static float _NkuhanaMaxRange = 80f; //40
-        private static bool _ChangeNkuhanaHealthCalculation = true;
         private static bool _ShouldBenthicWeighSelection = true;
         private static bool _InvertBenthicWeightedSelection = true;
         private static bool _BiasBenthicWeightedSelection = true;
 
         internal static ConfigFile CustomConfigFile { get; set; }
-        private static ConfigEntry<bool> PoolHealingBeforeModifiers { get; set; }
-        private static ConfigEntry<bool> PoolHealingAfterIncrease { get; set; }
-        private static ConfigEntry<float> NkuhanaDamageMultiplier { get; set; }
-        private static ConfigEntry<float> NkuhanaProcCoefficient { get; set; }
-        private static ConfigEntry<float> NkuhanaMaxRange { get; set; }
-        private static ConfigEntry<bool> ChangeNkuhanaHealthCalculation { get; set; }
         private static ConfigEntry<bool> ShouldBenthicWeighSelection { get; set; }
         private static ConfigEntry<bool> InvertBenthicWeightedSelection { get; set; }
         private static ConfigEntry<bool> BiasBenthicWeightedSelection { get; set; }
+        internal static ConfigEntry<bool> PoolHealingBeforeModifiers { get; set; }
+        internal static ConfigEntry<bool> PoolHealingAfterIncrease { get; set; }
         internal static ConfigEntry<float> VoidBandDamageMult { get; set; }
         internal static ConfigEntry<float> VoidBandProcCoeff { get; set; }
+        internal static ConfigEntry<float> NkuhanaDamageMultiplier { get; set; }
+        internal static ConfigEntry<float> NkuhanaProcCoefficient { get; set; }
+        internal static ConfigEntry<float> NkuhanaMaxRange { get; set; }
+        internal static ConfigEntry<bool> ChangeNkuhanaHealthCalculation { get; set; }
 
 
         void Awake()

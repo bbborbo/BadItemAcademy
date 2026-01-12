@@ -20,10 +20,16 @@ namespace BadItemAcademy
 {
     public partial class BadItemAcademyPlugin
     {
+        private static bool _PoolHealingBeforeModifiers = true;
+        private static bool _PoolHealingAfterIncrease = false;
+        private static float _NkuhanaDamageMultiplier = 3.5f; //2.5
+        private static float _NkuhanaProcCoefficient = 1.0f; //0.2
+        private static float _NkuhanaMaxRange = 80f; //40
+
         public static void RehabNkuhanas()
         {
             if (PoolHealingBeforeModifiers.Value)
-                IL.RoR2.HealthComponent.Heal += HealthComponent_Heal;
+                IL.RoR2.HealthComponent.Heal += HealthComponent_Heal_Pooling;
             IL.RoR2.HealthComponent.ServerFixedUpdate += NkuhanasBuff;
 
             LanguageAPI.Add("ITEM_NOVAONHEAL_DESC",
@@ -131,7 +137,7 @@ namespace BadItemAcademy
             c.Emit(OpCodes.Ldc_R4, NkuhanaDamageMultiplier.Value);
         }
 
-        public static void HealthComponent_Heal(ILContext il)
+        public static void HealthComponent_Heal_Pooling(ILContext il)
         {
             ILCursor c = new ILCursor(il);
             ILLabel _target = c.DefineLabel();
@@ -145,7 +151,7 @@ namespace BadItemAcademy
 
             if (!labelFound)
             {
-                DebugBreakpoint(nameof(HealthComponent_Heal));
+                DebugBreakpoint(nameof(HealthComponent_Heal_Pooling));
                 return;
             }
 
