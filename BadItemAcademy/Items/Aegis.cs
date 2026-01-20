@@ -49,14 +49,14 @@ namespace BadItemAcademy
 
             GetStatCoefficients += AegisStatCoefficients;
 
-            LanguageAPI.Add("ITEM_BARRIERONOVERHEAL_PICKUP", "Healing past full grants you a temporary barrier. Decayed barrier boosts ALL stats.");
+            LanguageAPI.Add("ITEM_BARRIERONOVERHEAL_PICKUP", "Healing past full grants you a temporary barrier. Decayed barrier boosts all damage stats.");
             LanguageAPI.Add("ITEM_BARRIERONOVERHEAL_DESC", 
                 $"Healing past full grants you a <style=cIsHealing>temporary barrier</style> " +
                 $"for <style=cIsHealing>50% <style=cStack>(+50% per stack)</style></style> " +
                 $"of the amount you <style=cIsHealing>healed</style>. " +
                 (AegisUseFortification.Value == false ? "" :
                 $"Every <style=cIsHealing>{AegisForceConversionThreshold.Value * 100}%</style> barrier that decays is converted into " +
-                $"<style=cIsDamage>Fortification</style>, increasing <style=cIsDamage>ALL</style> stats " +
+                $"<style=cIsDamage>Fortification</style>, increasing damage, attack speed, and critical strike chance " +
                 $"by up to <style=cIsDamage>{AegisMaxStatBonusBase.Value * 100}%</style> " +
                 $"<style=cStack>(+{AegisMaxStatBonusStack.Value * 100}% per stack)</style>. " +
                 $"<style=cIsDamage>Fortification</style> is lost when taking damage."));
@@ -76,13 +76,13 @@ namespace BadItemAcademy
             {
                 float aegisMaxStatBonus = AegisMaxStatBonusBase.Value + AegisMaxStatBonusStack.Value * (itemCount - 1);
                 float statBonus = aegisMaxStatBonus * ((float)buffCount / (float)AegisMaxFortificationStacks.Value);
-                args.healthMultAdd += statBonus;
-                args.regenMultAdd += statBonus;
-                args.moveSpeedMultAdd += statBonus;
+                //args.healthMultAdd += statBonus;
+                //args.regenMultAdd += statBonus;
+                //args.moveSpeedMultAdd += statBonus;
                 args.damageMultAdd += statBonus;
                 args.attackSpeedMultAdd += statBonus;
                 args.critAdd += statBonus * 100;
-                args.armorTotalMult += statBonus;
+                //args.armorTotalMult += statBonus;
             }
         }
 
