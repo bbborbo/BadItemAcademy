@@ -15,16 +15,17 @@ using System.Security.Permissions;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using static BadItemAcademy.Bindings;
 
 namespace BadItemAcademy
 {
     public partial class BadItemAcademyPlugin
     {
-        private static bool _PoolHealingBeforeModifiers = true;
-        private static bool _PoolHealingAfterIncrease = false;
-        private static float _NkuhanaDamageMultiplier = 3.5f; //2.5
-        private static float _NkuhanaProcCoefficient = 1.0f; //0.2
-        private static float _NkuhanaMaxRange = 80f; //40
+        internal static bool _PoolHealingBeforeModifiers = true;
+        internal static bool _PoolHealingAfterIncrease = false;
+        internal static float _NkuhanaDamageMultiplier = 3.5f; //2.5
+        internal static float _NkuhanaProcCoefficient = 1.0f; //0.2
+        internal static float _NkuhanaMaxRange = 80f; //40
 
         public static void RehabNkuhanas()
         {

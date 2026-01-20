@@ -2,7 +2,6 @@
 using MonoMod.Cil;
 using R2API;
 using RoR2;
-using RoR2.Items;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -10,6 +9,9 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
 using static R2API.RecalculateStatsAPI;
+using static BadItemAcademy.Bindings;
+
+using RoR2.Items;
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
 
 namespace BadItemAcademy
@@ -19,19 +21,19 @@ namespace BadItemAcademy
 
         public static BuffDef AegisFortificationBuff;
 
-        private static float _AegisConversionInterval = 1f;
-        private static float _AegisConversionRate = 1f;
-        private static float _AegisRemovalRate = 1f;
-        private static float _AegisForceConversionThreshold = 0.05f;
-        private static int _AegisMaxFortificationStacks = 100;
-        private static float _AegisMaxStatBonusBase = 0.15f;
-        private static float _AegisMaxStatBonusStack = 0.1f;
-        private static bool _AegisRevertHealingReduction = true;
-        private static bool _AegisUseFortification = true;
+        internal static float _AegisConversionInterval = 1f;
+        internal static float _AegisConversionRate = 1f;
+        internal static float _AegisRemovalRate = 1f;
+        internal static float _AegisForceConversionThreshold = 0.05f;
+        internal static int _AegisMaxFortificationStacks = 100;
+        internal static float _AegisMaxStatBonusBase = 0.2f;
+        internal static float _AegisMaxStatBonusStack = 0.1f;
+        internal static bool _AegisRevertHealingReduction = true;
+        internal static bool _AegisUseFortification = true;
 
-        private static float incomingHealingCache = 0;
-        private static float modifiedHealingCache = 0;
-        private static float barrierDecayedCache = 0;
+        internal static float incomingHealingCache = 0;
+        internal static float modifiedHealingCache = 0;
+        internal static float barrierDecayedCache = 0;
         public static void RehabAegis()
         {
             AegisFortificationBuff = ScriptableObject.CreateInstance<BuffDef>();
@@ -209,7 +211,7 @@ namespace BadItemAcademy
 
         void Start()
         {
-            if(BadItemAcademyPlugin.AegisUseFortification.Value == true)
+            if(AegisUseFortification.Value == true)
                 body?.healthComponent?.AddOnTakeDamageServerReceiver(this);
         }
         void OnDestroy()
@@ -230,12 +232,12 @@ namespace BadItemAcademy
         {
             if (isAtFullFortification)
                 return;
-            decayedBarrierCumulative += barrierDecayed * BadItemAcademyPlugin.AegisConversionRate.Value;
+            decayedBarrierCumulative += barrierDecayed * AegisConversionRate.Value;
 
             aegisConversionStopwatch += Time.fixedDeltaTime;
             if (this.healthComponent.barrier <= float.Epsilon 
-                || decayedBarrierCumulative >= healthComponent.fullCombinedHealth * BadItemAcademyPlugin.AegisForceConversionThreshold.Value
-                || aegisConversionStopwatch >= BadItemAcademyPlugin.AegisConversionInterval.Value)
+                || decayedBarrierCumulative >= healthComponent.fullCombinedHealth * AegisForceConversionThreshold.Value
+                || aegisConversionStopwatch >= AegisConversionInterval.Value)
             {
                 aegisConversionStopwatch = 0;
                 int buffStacks = 0;
@@ -253,9 +255,9 @@ namespace BadItemAcademy
 
                 int currentBuffCount = this.body.GetBuffCount(GetBuffDef().buffIndex);
                 int newBuffCount = currentBuffCount + buffStacks;
-                if (newBuffCount >= BadItemAcademyPlugin.AegisMaxFortificationStacks.Value)
+                if (newBuffCount >= AegisMaxFortificationStacks.Value)
                 {
-                    newBuffCount = BadItemAcademyPlugin.AegisMaxFortificationStacks.Value;
+                    newBuffCount = AegisMaxFortificationStacks.Value;
                     isAtFullFortification = true;
                 }
                 this.body.SetBuffCount(GetBuffDef().buffIndex, newBuffCount);
@@ -273,7 +275,7 @@ namespace BadItemAcademy
                 return;
 
             float healthLost = damageReport.combinedHealthBeforeDamage - victimHealthComponent.combinedHealth;
-            int buffStacksToLose = Mathf.FloorToInt((100 * healthLost * BadItemAcademyPlugin.AegisRemovalRate.Value) / victimHealthComponent.fullCombinedHealth);
+            int buffStacksToLose = Mathf.FloorToInt((100 * healthLost * AegisRemovalRate.Value) / victimHealthComponent.fullCombinedHealth);
 
             damageReport.victimBody.SetBuffCount(GetBuffDef().buffIndex, Mathf.Max(currentBuffCount - buffStacksToLose, 0));
 

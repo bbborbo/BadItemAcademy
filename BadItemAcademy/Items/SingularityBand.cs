@@ -15,14 +15,14 @@ using System.Security.Permissions;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using static BadItemAcademy.Bindings;
 
 namespace BadItemAcademy
 {
     public partial class BadItemAcademyPlugin
     {
-
-        private static float _VoidBandDamageMult = 2; //1
-        private static float _VoidBandProcCoeff = 2; //1
+        internal static float _VoidBandDamageMult = 2; //1
+        internal static float _VoidBandProcCoeff = 2; //1
         public static void RehabSingularityBand()
         {
             LoadAsync<GameObject>(RoR2BepInExPack.GameAssetPathsBetter.RoR2_DLC1_ElementalRingVoid.ElementalRingVoidBlackHole_prefab, (prefab) =>
