@@ -38,9 +38,9 @@ namespace BadItemAcademy
         {
             AegisFortificationBuff = ScriptableObject.CreateInstance<BuffDef>();
             AegisFortificationBuff.name = "bdBarrierFortification";
-            AegisFortificationBuff.iconSprite = mainAssetBundle.LoadAsset<Sprite>("Assets/Textures/Icons/Buff/aegisbarrier");
+            AegisFortificationBuff.iconSprite = mainAssetBundle.LoadAsset<Sprite>("Assets/Textures/Icons/Buff/aegisbarrier.png");
             // Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/texBuffGenericShield.tif").WaitForCompletion();
-            AegisFortificationBuff.buffColor = Color.yellow;
+            AegisFortificationBuff.buffColor = Color.white;
             AegisFortificationBuff.canStack = true;
             AegisFortificationBuff.isDebuff = false;
             AegisFortificationBuff.stackingDisplayMethod = BuffDef.StackingDisplayMethod.Percentage;
