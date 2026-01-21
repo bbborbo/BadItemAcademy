@@ -267,6 +267,11 @@ namespace BadItemAcademy
 
         public void OnTakeDamageServer(DamageReport damageReport)
         {
+            if (damageReport.attacker == damageReport.victim)
+                return;
+            if (damageReport.damageInfo.damageType.damageType == DamageType.Silent)
+                return;
+
             HealthComponent victimHealthComponent = damageReport.victimBody?.healthComponent;
             if (damageReport.victimBody?.healthComponent == null)
                 return;
