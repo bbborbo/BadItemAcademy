@@ -267,8 +267,8 @@ namespace BadItemAcademy
 
         public void OnTakeDamageServer(DamageReport damageReport)
         {
-            if (damageReport.attacker == damageReport.victim)
-                return;
+            //if (damageReport.attacker == damageReport.victim)
+            //    return;
             if (damageReport.damageInfo.damageType.damageType == DamageType.Silent)
                 return;
 
