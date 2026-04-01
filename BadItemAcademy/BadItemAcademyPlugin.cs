@@ -39,7 +39,7 @@ namespace BadItemAcademy
         public const string guid = "com." + teamName + "." + modName;
         public const string teamName = "BadItemCouncil";
         public const string modName = "BadItemRehabilitation";
-        public const string version = "1.1.0";
+        public const string version = "1.1.1";
 
 
         private static AssetBundle _mainAssetBundle;
@@ -67,6 +67,7 @@ namespace BadItemAcademy
             RehabSingularityBand();
             RehabBenthic();
             RehabAegis();
+            RehabBottledChaos();
 
             Bindings.Save();
         }
