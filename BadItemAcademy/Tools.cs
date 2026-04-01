@@ -35,6 +35,8 @@ namespace BadItemAcademy
     }
     public static class Bindings
     {
+        internal static bool AprilFools;
+
         internal static ConfigFile CustomConfigFile { get; set; }
         internal static ConfigEntry<bool> PoolHealingBeforeModifiers { get; set; }
         internal static ConfigEntry<bool> PoolHealingAfterIncrease { get; set; }
@@ -56,6 +58,7 @@ namespace BadItemAcademy
         internal static ConfigEntry<float> AegisMaxStatBonusStack { get; set; }
         internal static ConfigEntry<bool> AegisRevertHealingReduction { get; set; }
         internal static ConfigEntry<bool> AegisUseFortification { get; set; }
+        internal static ConfigEntry<bool> UseAprilFools { get; set; }
         public static void Init()
         {
             string section = "Bad Item Rehabilitation : ";
@@ -217,6 +220,16 @@ namespace BadItemAcademy
                     "created by Singularity Band."
                 );
             #endregion
+
+            AprilFools = DateTime.Now.Month == 4 && DateTime.Now.Day <= 7;
+            if (!AprilFools)
+            {
+                UseAprilFools = CustomConfigFile.Bind("April Fools",
+                    "April Fools",
+                    false,
+                    "Use April Fools' Day changes on days that are not April Fools' Day");
+                AprilFools = UseAprilFools.Value;
+            }
         }
         public static void Save()
         {
