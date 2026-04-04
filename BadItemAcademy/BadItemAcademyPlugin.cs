@@ -39,7 +39,7 @@ namespace BadItemAcademy
         public const string guid = "com." + teamName + "." + modName;
         public const string teamName = "BadItemCouncil";
         public const string modName = "BadItemRehabilitation";
-        public const string version = "1.2.0";
+        public const string version = "1.2.2";
 
         private static AssetBundle _mainAssetBundle;
         public static AssetBundle mainAssetBundle

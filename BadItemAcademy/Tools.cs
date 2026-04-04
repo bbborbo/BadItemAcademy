@@ -58,6 +58,7 @@ namespace BadItemAcademy
         internal static ConfigEntry<float> AegisMaxStatBonusStack { get; set; }
         internal static ConfigEntry<bool> AegisRevertHealingReduction { get; set; }
         internal static ConfigEntry<bool> AegisUseFortification { get; set; }
+        internal static ConfigEntry<bool> DontUseAprilFools { get; set; }
         internal static ConfigEntry<bool> UseAprilFools { get; set; }
         public static void Init()
         {
@@ -225,10 +226,18 @@ namespace BadItemAcademy
             if (!AprilFools)
             {
                 UseAprilFools = CustomConfigFile.Bind("April Fools",
-                    "April Fools",
+                    "Use April Fools",
                     false,
                     "Use April Fools' Day changes on days that are not April Fools' Day");
                 AprilFools = UseAprilFools.Value;
+            }
+            else
+            {
+                DontUseAprilFools = CustomConfigFile.Bind("April Fools",
+                    "Dont Use April Fools",
+                    false,
+                    "Dont use April Fools Day changes on days that are April Fools Day");
+                AprilFools = !DontUseAprilFools.Value;
             }
         }
         public static void Save()
