@@ -11,6 +11,9 @@ using MonoMod.Cil;
 using Mono.Cecil.Cil;
 using RoR2.Artifacts;
 using UnityEngine.AddressableAssets;
+using RoR2.UI;
+using static BadItemAcademy.Bindings;
+using R2API;
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
 
@@ -34,47 +37,188 @@ namespace BadItemAcademy
     /// </summary>
     public partial class BadItemAcademyPlugin
     {
+        private static GameObject _bottleChaosNetworkedBodyAttachment;
+        public static GameObject bottleChaosNetworkedBodyAttachment
+        {
+            get
+            {
+                return _bottleChaosNetworkedBodyAttachment;
+            }
+        }
         internal static readonly Xoroshiro128Plus globalBottledChaosEquipmentRng = new Xoroshiro128Plus(0UL);
-        internal static List<EquipmentIndex> bottledChaosWidgetValidEquipment = new List<EquipmentIndex>();
+        public static List<EquipmentIndex> bottledChaosWidgetValidEquipment = new List<EquipmentIndex>();
         internal static int _ChaosBonusBase = 1;
         internal static int _ChaosBonusStack = 1;
         internal static int _ChaosWidgetCount = 1;
+        internal static bool _ChaosBlacklistEgg = true;
+        //internal static bool _ChaosQueueAllowSeedOfLife = true;
+        internal static bool _ChaosQueueAllowCapacitor = true;
+        internal static bool _ChaosQueueAllowRecycler = true;
+        internal static bool _ChaosQueueAllowTricorn = true;
+        internal static bool _ChaosQueueAllowLunar = false;
+        internal static bool _ChaosQueueAllowEgg = true;
         public static void RehabBottledChaos()
         {
-            RoR2.Run.onRunStartGlobal += (run) => 
-            {
-                globalBottledChaosEquipmentRng.ResetSeed(run.seed);
+            CreateBottleChaosBodyAttachment();
 
-                foreach (EquipmentIndex equipmentIndex in EquipmentCatalog.enigmaEquipmentList)
+            if(true)//ChaosWidgetCount.Value > 0)
+            {
+                RoR2.Run.onRunStartGlobal += GenerateChaosWidgetEquipmentList;
+                On.RoR2.UI.HUD.Awake += AddBhaosWidget;
+                On.RoR2.EquipmentSlot.RpcOnClientEquipmentActivationRecieved += UpdateBhaosWidgetClient;
+                IL.RoR2.EquipmentSlot.OnEquipmentExecuted_byte_byte_EquipmentIndex += AlterBhaosFireCount;
+                //Stage.onStageStartGlobal += RefreshChaosWidgetsOnStageStart;
+                On.RoR2.CharacterMaster.OnBodyStart += OnPlayerBodyStart;
+                //On.RoR2.CharacterBody.OnInventoryChanged += OnPlayerBodyInventoryChange;
+            }
+
+            IL.RoR2.EquipmentSlot.FireBossHunter += FixBossHunterChaos;
+
+            LoadAsync<EquipmentDef>(RoR2BepInExPack.GameAssetPaths.Version_1_35_0.RoR2_Base_FireBallDash.FireBallDash_asset, (equip) =>
+            {
+                if (ChaosBlacklistEgg.Value)
                 {
-                    EquipmentDef equipmentDef = EquipmentCatalog.GetEquipmentDef(equipmentIndex);
-                    if (equipmentDef && (!equipmentDef.requiredExpansion || run.IsExpansionEnabled(equipmentDef.requiredExpansion)))
-                    {
-                        bottledChaosWidgetValidEquipment.Add(equipmentIndex);
-                    }
+                    equip.canBeRandomlyTriggered = false;
                 }
-            };
-            On.RoR2.UI.HUD.Awake += AddBhaosWidget;
-            On.RoR2.EquipmentSlot.RpcOnClientEquipmentActivationRecieved += UpdateBhaosWidget;
-            IL.RoR2.EquipmentSlot.OnEquipmentExecuted += AlterBhaosFireCount;
+            });
         }
 
-        private static void UpdateBhaosWidget(On.RoR2.EquipmentSlot.orig_RpcOnClientEquipmentActivationRecieved orig, EquipmentSlot self)
+        //called from plugin awake
+        private static void CreateBottleChaosBodyAttachment()
         {
-            orig(self);
+            _bottleChaosNetworkedBodyAttachment =
+                Addressables.LoadAssetAsync<GameObject>(
+                        RoR2BepInExPack.GameAssetPaths.Version_1_35_0.RoR2_Base_QuestVolatileBattery.QuestVolatileBatteryAttachment_prefab
+                    ).WaitForCompletion()
+                    .InstantiateClone("BIA_BottleChaosBodyAttachment", true);
 
-            if(self.characterBody.TryGetComponent(out BottleChaosItemBehavior behavior))
+            if (_bottleChaosNetworkedBodyAttachment.TryGetComponent(out NetworkStateMachine nsm))
             {
-                behavior.UpdateNextEquipmentDef();
+                Destroy(nsm);
+            }
+            if (_bottleChaosNetworkedBodyAttachment.TryGetComponent(out EntityStateMachine esm))
+            {
+                Destroy(esm);
+            }
+
+            //NetworkIdentity ni = _bottleChaosNetworkedBodyAttachment.AddComponent<NetworkIdentity>();
+            //NetworkedBodyAttachment nba = _bottleChaosNetworkedBodyAttachment.AddComponent<NetworkedBodyAttachment>();
+            //nba.networkIdentity = ni;
+
+            BottleChaosBodyAttachment bcba = _bottleChaosNetworkedBodyAttachment.AddComponent<BottleChaosBodyAttachment>();
+
+            R2API.ContentAddition.AddNetworkedObject(_bottleChaosNetworkedBodyAttachment);
+            //_bottleChaosNetworkedBodyAttachment.SetActive(false);
+        }
+
+        private static void FixBossHunterChaos(ILContext il)
+        {
+            ILCursor c = new ILCursor(il);
+
+            ILLabel label = c.DefineLabel();
+            bool b1 = c.TryGotoNext(MoveType.After,
+                x => x.MatchCallOrCallvirt<RoR2.CharacterMasterNotificationQueue>(nameof(CharacterMasterNotificationQueue.SendTransformNotification)))
+                && c.TryGotoPrev(MoveType.Before,
+                x => x.MatchBrfalse(out label))
+                && c.TryGotoPrev(MoveType.Before,
+                x => x.MatchLdarg(0),
+                x => x.MatchCallOrCallvirt<EquipmentSlot>("get_characterBody")
+                );
+            if (!b1)
+            {
+                DebugBreakpoint(nameof(FixBossHunterChaos));
+                return;
+            }
+            c.Emit(OpCodes.Ldarg_0);
+            c.EmitDelegate<Func<EquipmentSlot, bool>>((slot) =>
+            {
+                Debug.Log(EquipmentCatalog.GetEquipmentDef(slot.equipmentIndex).nameToken);
+                //false if held eq is not tricorn
+                return slot.equipmentIndex == DLC1Content.Equipment.BossHunter.equipmentIndex;
+            });
+            c.Emit(OpCodes.Brfalse_S, label);
+        }
+
+        public static void GenerateChaosWidgetEquipmentList(Run run)
+        {
+            bottledChaosWidgetValidEquipment = new List<EquipmentIndex>();
+            globalBottledChaosEquipmentRng.ResetSeed(run.seed);
+
+            foreach (EquipmentIndex equipmentIndex in EquipmentCatalog.randomTriggerEquipmentList)
+            {
+                EquipmentDef def = EquipmentCatalog.GetEquipmentDef(equipmentIndex);
+                ValidateEquipment(def);
+            }
+            if (ChaosQueueAllowLunar.Value)
+            {
+                foreach (EquipmentIndex equipmentIndex in EquipmentCatalog.enigmaEquipmentList)
+                {
+                    EquipmentDef def = EquipmentCatalog.GetEquipmentDef(equipmentIndex);
+                    if (def.isLunar)
+                        ValidateEquipment(def);
+                }
+            }
+            if (ChaosBlacklistEgg.Value && ChaosQueueAllowEgg.Value)
+            {
+                ValidateEquipment(RoR2Content.Equipment.FireBallDash);
+            }
+            if (false)//ChaosQueueAllowCapacitor.Value)
+            {
+                ValidateEquipment(RoR2Content.Equipment.Lightning);
+            }
+            if (ChaosQueueAllowRecycler.Value)
+            {
+                ValidateEquipment(RoR2Content.Equipment.Recycle);
+            }
+            if (ChaosQueueAllowTricorn.Value)
+            {
+                ValidateEquipment(DLC1Content.Equipment.BossHunter);
+            }
+
+            void ValidateEquipment(EquipmentDef def)
+            {
+                if (def
+                && (!def.requiredExpansion || run.IsExpansionEnabled(def.requiredExpansion)))
+                {
+                    bottledChaosWidgetValidEquipment.Add(def.equipmentIndex);
+                }
             }
         }
 
-        public static int GetBhaosActivationCountFromBhaosStacks(int stack, EquipmentSlot equipmentSlot)
+        private static void RefreshChaosWidgetsOnStageStart(Stage obj)
+        {
+            BottleChaosWidget.RefreshAll();
+        }
+
+        private static void OnPlayerBodyStart(On.RoR2.CharacterMaster.orig_OnBodyStart orig, CharacterMaster self, CharacterBody body)
+        {
+            orig(self, body);
+            if (!body.isPlayerControlled)
+                return;
+            BottleChaosWidget.RefreshAll();
+        }
+
+        private static void OnPlayerBodyInventoryChange(On.RoR2.CharacterBody.orig_OnInventoryChanged orig, CharacterBody self)
+        {
+            orig(self);
+            if (!self.isPlayerControlled)
+                return;
+            BottleChaosWidget.RefreshAll();
+        }
+
+        private static void UpdateBhaosWidgetClient(On.RoR2.EquipmentSlot.orig_RpcOnClientEquipmentActivationRecieved orig, EquipmentSlot self)
+        {
+            orig(self);
+
+            BottleChaosWidget.RefreshAll();
+        }
+
+        public static int GetBhaosActivationCountFromBhaosStacks(int stack)
         {
             if (stack == 0)
                 return 0;
 
-            int chaosCountOut = _ChaosBonusBase + _ChaosBonusStack * (stack - 1);// - _ChaosWidgetCount;
+            int chaosCountOut = ChaosBonusBase.Value + ChaosBonusStack.Value * (stack - 1);// - _ChaosWidgetCount;
             //CharacterBody cb = equipmentSlot.characterBody;
 
             return chaosCountOut;
@@ -83,6 +227,8 @@ namespace BadItemAcademy
         private static void AddBhaosWidget(On.RoR2.UI.HUD.orig_Awake orig, RoR2.UI.HUD self)
         {
             orig(self);
+            if (!NetworkServer.active)
+                return;
 
             GameObject chaosHud = new GameObject("BIA_BottledChaosHUD");
             chaosHud.layer = LayerMask.NameToLayer("UI");
@@ -92,6 +238,7 @@ namespace BadItemAcademy
 
             BottleChaosWidget widget = chaosHud.AddComponent<BottleChaosWidget>();
             widget.Initialize(self);
+            widget.gameObject.SetActive(false);
         }
 
 
@@ -112,16 +259,17 @@ namespace BadItemAcademy
             c.Emit(OpCodes.Ldarg_0);
             c.EmitDelegate<Func<int, EquipmentSlot, int>>((stack, equipmentSlot) => 
             {
-                int totalActivations = GetBhaosActivationCountFromBhaosStacks(stack, equipmentSlot);
+                int totalActivations = GetBhaosActivationCountFromBhaosStacks(stack);
                 int remainingActivations = totalActivations;
 
                 if(totalActivations > 0 && equipmentSlot.characterBody.TryGetComponent(out BottleChaosItemBehavior itemBehavior))
                 {
+                    BottleChaosBodyAttachment bodyAttachment = itemBehavior.bodyAttachmentComponent;
                     //this way of doing things allows a widget-equipment to be substituted for a random one, if the widget-equipment cannot be used
                     //it should not allow 
-                    for(int i = 0; i < totalActivations && i < itemBehavior.nextEquipments.Length; i++)
+                    for(int i = 0; i < totalActivations && i < bodyAttachment.nextEquipments.Length; i++)
                     {
-                        EquipmentDef def = EquipmentCatalog.GetEquipmentDef(itemBehavior.nextEquipments[i]);
+                        EquipmentDef def = EquipmentCatalog.GetEquipmentDef((EquipmentIndex)bodyAttachment.nextEquipments[i]);
                         if (equipmentSlot.PerformEquipmentAction(def))
                         {
                             remainingActivations--;
@@ -148,6 +296,15 @@ namespace BadItemAcademy
                             }
                         }
                     }
+                    bodyAttachment.UpdateNextEquipmentDef();
+                }
+
+                if(remainingActivations == 0)
+                {
+                    EffectData effectData = new EffectData();
+                    effectData.origin = equipmentSlot.characterBody.corePosition;
+                    effectData.SetNetworkedObjectReference(equipmentSlot.gameObject);
+                    EffectManager.SpawnEffect(LegacyResourcesAPI.Load<GameObject>("Prefabs/Effects/RandomEquipmentTriggerProcEffect"), effectData, true);
                 }
 
                 return remainingActivations;
@@ -159,10 +316,21 @@ namespace BadItemAcademy
     {
         [ItemDefAssociation(useOnServer = true, useOnClient = true)]
         private static ItemDef GetItemDef() => DLC1Content.Items.RandomEquipmentTrigger;
-
-        public EquipmentIndex[] nextEquipments;
-        int cachedActivationCount;
-        int cachedGestureCount;
+        private GameObject bodyAttachmentObject;
+        private BottleChaosBodyAttachment _bodyAttachmentComponent;
+        public BottleChaosBodyAttachment bodyAttachmentComponent
+        {
+            get
+            {
+                if (_bodyAttachmentComponent == null)
+                    bodyAttachmentComponent = body.GetComponentInChildren<BottleChaosBodyAttachment>();
+                return _bodyAttachmentComponent;
+            }
+            private set
+            {
+                _bodyAttachmentComponent = value;
+            }
+        }
         private EquipmentSlot equipmentSlot
         {
             get
@@ -175,73 +343,46 @@ namespace BadItemAcademy
             }
         }
 
-
-        public static EquipmentIndex GetRandomEquipment(Xoroshiro128Plus rng, int offset)
+        void UpdateNextEquipmentDef(bool updateAll = false)
         {
-            int count = BadItemAcademyPlugin.bottledChaosWidgetValidEquipment.Count;
-            int num = rng.RangeInt(0, count);
-            num += offset;
-            num %= count;
-            return BadItemAcademyPlugin.bottledChaosWidgetValidEquipment[num];
-        }
-
-        internal void UpdateNextEquipmentDef()
-        {
-            if (stack == 0 || nextEquipments == null || nextEquipments.Length == 0)
+            if (!NetworkServer.active)
                 return;
-
-            for (int i = 0; i < nextEquipments.Length; i--)
+            if (bodyAttachmentComponent == null)
             {
-                if (i + cachedActivationCount < nextEquipments.Length)//activation count is less than widget count
-                {
-                    nextEquipments[i] = nextEquipments[i + cachedActivationCount];
-                    continue;
-                }
-
-                EquipmentIndex randomEquipment = GetRandomEquipment(BadItemAcademyPlugin.globalBottledChaosEquipmentRng, (int)(i + body.bodyIndex));
-                nextEquipments[i] = randomEquipment;
-            }
-        }
-
-
-        void Start()
-        {
-            nextEquipments = new EquipmentIndex[BadItemAcademyPlugin._ChaosWidgetCount];
-        }
-
-        void Update()
-        {
-            EquipmentSlot slot = equipmentSlot;
-            if (slot)
+                Debug.LogError("BIA: Bottled Chaos Networked Nody Attachment not found!");
                 return;
-            for(int i = 0; i < cachedActivationCount && i < nextEquipments.Length; i++)
-            {
-                slot.UpdateTargets(nextEquipments[i], slot.stock + cachedGestureCount > 0);
             }
+            bodyAttachmentComponent.UpdateNextEquipmentDef(updateAll);
         }
+
         public override void OnInventoryRefresh()
         {
             base.OnInventoryRefresh();
-            cachedActivationCount = BadItemAcademyPlugin.GetBhaosActivationCountFromBhaosStacks(stack, equipmentSlot);
-            cachedGestureCount = body.inventory != null ? body.inventory.GetItemCountEffective(RoR2Content.Items.AutoCastEquipment) : 0;
+
+            BottleChaosWidget.RefreshAll();
         }
 
         void OnEnable()
         {
+            Debug.LogError("sdfbsdjhbhjsdbvsdv");
             if (NetworkServer.active)
-                EquipmentSlot.onServerEquipmentActivated += OnServerEquipmentActivated;
+            {
+                Debug.LogError("uuuuu");
+                bodyAttachmentObject = Instantiate(BadItemAcademyPlugin.bottleChaosNetworkedBodyAttachment, body.transform);
+                bodyAttachmentObject.SetActive(true);
+                bodyAttachmentObject.GetComponent<NetworkedBodyAttachment>().AttachToGameObjectAndSpawn(body.gameObject);
+                bodyAttachmentComponent = bodyAttachmentObject.GetComponent<BottleChaosBodyAttachment>();
+                UpdateNextEquipmentDef(true);
+            }
+            //if (NetworkServer.active)
+            //    EquipmentSlot.onServerEquipmentActivated += OnServerEquipmentActivated;
         }
 
         void OnDisable()
         {
-            EquipmentSlot.onServerEquipmentActivated -= OnServerEquipmentActivated;
-        }
-
-        private void OnServerEquipmentActivated(EquipmentSlot slot, EquipmentIndex indexFired)
-        {
-            //not our equipment slot!
-            if (body.equipmentSlot == null || slot != body.equipmentSlot)
-                return;
+            if(NetworkServer.active)
+                UpdateNextEquipmentDef();
+            //EquipmentSlot.onServerEquipmentActivated -= OnServerEquipmentActivated;
         }
     }
 }
