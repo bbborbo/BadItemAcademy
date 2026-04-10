@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -8,6 +8,8 @@
       https://api.nuget.org/v3/index.json;
       https://nuget.bepinex.dev/v3/index.json;
     </RestoreAdditionalProjectSources>
+    <RunPostBuildEvent>Always</RunPostBuildEvent>
+    <PatchDir>$(SolutionDir)UNetWeaver\</PatchDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,5 +25,10 @@
     <PackageReference Include="R2API" Version="5.0.5" />
     <PackageReference Include="R2API.RecalculateStats" Version="1.6.5" />
   </ItemGroup>
-
+  
+  <Target Name="Weave" AfterTargets="PostBuildEvent">
+    <Copy SourceFiles="$(OutDir)$(TargetFileName)" DestinationFolder="$(PatchDir)" />
+    <Copy SourceFiles="$(OutDir)$(TargetName).pdb" DestinationFolder="$(PatchDir)" />
+    <Exec Command="Unity.UNetWeaver.exe &quot;$(PatchDir)libs\UnityEngine.CoreModule.dll&quot; &quot;$(PatchDir)libs\com.unity.multiplayer-hlapi.Runtime.dll&quot; &quot;$(ProjectDir)Patched&quot; &quot;$(TargetFileName)&quot; &quot;&quot;" WorkingDirectory="$(PatchDir)" />
+  </Target>
 </Project>

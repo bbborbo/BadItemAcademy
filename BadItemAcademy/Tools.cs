@@ -58,6 +58,16 @@ namespace BadItemAcademy
         internal static ConfigEntry<float> AegisMaxStatBonusStack { get; set; }
         internal static ConfigEntry<bool> AegisRevertHealingReduction { get; set; }
         internal static ConfigEntry<bool> AegisUseFortification { get; set; }
+
+        internal static ConfigEntry<int> ChaosBonusBase   { get; set; }
+        internal static ConfigEntry<int> ChaosBonusStack  { get; set; }
+        internal static ConfigEntry<int> ChaosWidgetCount { get; set; }
+        internal static ConfigEntry<bool> ChaosBlacklistEgg        { get; set; }
+        internal static ConfigEntry<bool> ChaosQueueAllowCapacitor { get; set; }
+        internal static ConfigEntry<bool> ChaosQueueAllowRecycler  { get; set; }
+        internal static ConfigEntry<bool> ChaosQueueAllowTricorn   { get; set; }
+        internal static ConfigEntry<bool> ChaosQueueAllowLunar     { get; set; }
+        internal static ConfigEntry<bool> ChaosQueueAllowEgg       { get; set; }
         internal static ConfigEntry<bool> DontUseAprilFools { get; set; }
         internal static ConfigEntry<bool> UseAprilFools { get; set; }
         public static void Init()
@@ -219,6 +229,79 @@ namespace BadItemAcademy
                 _VoidBandProcCoeff,
                 "Vanilla is 1. Determines the proc effectiveness of the explosion from the black hole " +
                     "created by Singularity Band."
+                );
+            #endregion
+            #region bottled chaos
+
+            ChaosBonusBase = CustomConfigFile.Bind(
+                section + "Bottled Chaos",
+                "Bottled Chaos Bonus Activations (Base)",
+                _ChaosBonusBase,
+                "Vanilla is 1. " +
+                    "Determines the amount of random equipments to be activated with one stack of Bottled Chaos. " +
+                    "Note that this value can be less than or higher than the number of equipments displayed by BIRs Bottled Chaos Queue-Widget."
+                );
+            ChaosBonusStack = CustomConfigFile.Bind(
+                section + "Bottled Chaos",
+                "Bottled Chaos Bonus Activations (Stack)",
+                _ChaosBonusStack,
+                "Vanilla is 1. " +
+                    "Determines the amount of random equipments to be activated for each additional stack of Bottled Chaos. " +
+                    "Note that this value can be less than or higher than the number of equipments displayed by BIRs Bottled Chaos Queue-Widget."
+                );
+            ChaosWidgetCount = CustomConfigFile.Bind(
+                section + "Bottled Chaos",
+                "Bottled Chaos Queue Display Count",
+                _ChaosWidgetCount,
+                "Vanilla is 0. Determines the amount of random equipments to be displayed above the equipment slot while Bottled Chaos is held. " +
+                    "If the activation count is smaller than this number, the widget will behave as a queue, with equipments to the right being used after. " +
+                    "If the activation count is higher than this number, or if the displayed equipment cannot be activated, " +
+                    "additional random equipments will be triggered in order to fulfill the activation count. " +
+                    "Note that the Widget is allowed to choose ALL equipments that can be triggered at random, " +
+                    "as well as some equipments that cannot be triggered at random, such as Recycler."
+                );
+            ChaosBlacklistEgg = CustomConfigFile.Bind(
+                section + "Bottled Chaos : Random Activation Pool",
+                "Allow Random Activations Of Volcanic Egg?",
+                _ChaosBlacklistEgg,
+                "Vanilla is FALSE. If set to TRUE, the equipment Volcanic Egg will not be allowed to activate at random." +
+                    "Note that the Widget may be allowed to choose Volcanic Egg unless the relevant setting is changed."
+                );
+            ChaosQueueAllowLunar = CustomConfigFile.Bind(
+                section + "Bottled Chaos : Queued Activation Pool",
+                "Allow Queued Activations Of Lunar Equipments?",
+                _ChaosQueueAllowLunar,
+                "Vanilla is FALSE. If set to TRUE, all Lunar-tier equipments in the Enigma Artifact pool will be " +
+                    "added to the pool of equipments that can be chosen by the Bottled Chaos Queue-Widget."
+                );
+            ChaosQueueAllowEgg = CustomConfigFile.Bind(
+                section + "Bottled Chaos : Queued Activation Pool",
+                "Allow Queued Activations Of Volcanic Egg?",
+                _ChaosQueueAllowEgg,
+                "Vanilla is TRUE. If the equipment Volcanic Egg is disallowed from random activations, " +
+                    "this setting controls whether it will continue to appear via the Bottled Chaos Queue-Widget. " +
+                    "Set both to FALSE if you wish for Volcanic Egg to be eradicated from existence."
+                );
+            //ChaosQueueAllowCapacitor = CustomConfigFile.Bind(
+            //    section + "Bottled Chaos : Queued Activation Pool",
+            //    "Allow Queued Activations Of Royal Capacitor?",
+            //    _ChaosQueueAllowCapacitor,
+            //    "Vanilla is FALSE. If set to TRUE, the equipment Royal Capacitor will be " +
+            //        "added to the pool of equipments that can be chosen by the Bottled Chaos Queue-Widget."
+            //    );
+            ChaosQueueAllowRecycler = CustomConfigFile.Bind(
+                section + "Bottled Chaos : Queued Activation Pool",
+                "Allow Queued Activations Of Recycler?",
+                _ChaosQueueAllowRecycler,
+                "Vanilla is FALSE. If set to TRUE, the equipment Recycler will be " +
+                    "added to the pool of equipments that can be chosen by the Bottled Chaos Queue-Widget."
+                );
+            ChaosQueueAllowTricorn = CustomConfigFile.Bind(
+                section + "Bottled Chaos : Queued Activation Pool",
+                "Allow Queued Activations Of Trophy Hunters Tricorn?",
+                _ChaosQueueAllowTricorn,
+                "Vanilla is FALSE. If set to TRUE, the equipment Trophy Hunters Tricorn will be " +
+                    "added to the pool of equipments that can be chosen by the Bottled Chaos Queue-Widget."
                 );
             #endregion
 
