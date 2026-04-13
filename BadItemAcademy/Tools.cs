@@ -37,6 +37,13 @@ namespace BadItemAcademy
     {
         internal static bool AprilFools;
 
+        public static bool BindSection(string sectionName)
+        {
+            return CustomConfigFile.Bind<bool>("Bad Item Academy : Full Section Config",
+                sectionName,
+                true,
+                "Vanilla is FALSE. Set to false if you wish to disable changes made to an entire item or group of items.").Value;
+        }
         internal static ConfigFile CustomConfigFile { get; set; }
         internal static ConfigEntry<bool> PoolHealingBeforeModifiers { get; set; }
         internal static ConfigEntry<bool> PoolHealingAfterIncrease { get; set; }

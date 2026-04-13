@@ -10,8 +10,7 @@ namespace BadItemAcademy.Components
 {
     public class BottleChaosBodyAttachment : NetworkBehaviour
     {
-        [SyncVar]
-        public int[] nextEquipments;
+        public SyncListInt nextEquipments;
         private CharacterBody _attachedBody;
 
         public int cachedActivationCount;
@@ -49,7 +48,9 @@ namespace BadItemAcademy.Components
 
         public void Awake()
         {
-            nextEquipments = new int[ChaosWidgetCount.Value];
+            nextEquipments = new SyncListInt();
+            for(int i = 0; i < ChaosWidgetCount.Value; i++)
+                nextEquipments.Add(0);
         }
         public void OnEnable()
         {
@@ -96,7 +97,7 @@ namespace BadItemAcademy.Components
 
         public void UpdateNextEquipmentDef(bool updateAll = false)
         {
-            if ((cachedActivationCount == 0  || nextEquipments == null || nextEquipments.Length == 0)
+            if ((cachedActivationCount == 0  || nextEquipments == null || nextEquipments.Count <= 0)
                 )//&& !updateAll)
             {
                 BottleChaosWidget.RefreshAll();
@@ -106,9 +107,9 @@ namespace BadItemAcademy.Components
 
             //EquipmentIndex randomEquipment = GetRandomEquipment(BadItemAcademyPlugin.globalBottledChaosEquipmentRng, (int)(0 + attachedBody.bodyIndex));
             //nextEquipments = (int)randomEquipment;
-            for (int i = 0; i < nextEquipments.Length; i++)
+            for (int i = 0; i < nextEquipments.Count; i++)
             {
-                if (!updateAll && i + cachedActivationCount < nextEquipments.Length)//activation count is less than widget count
+                if (!updateAll && i + cachedActivationCount < nextEquipments.Count)//activation count is less than widget count
                 {
                     if (nextEquipments[i + cachedActivationCount] != (int)EquipmentIndex.None)
                     {
@@ -136,7 +137,7 @@ namespace BadItemAcademy.Components
             //    return;
             //
             //slot.UpdateTargets((EquipmentIndex)nextEquipments, slot.stock + cachedGestureCount > 0);
-            for (int i = 0; i < cachedActivationCount && i < nextEquipments.Length; i++)
+            for (int i = 0; i < cachedActivationCount && i < nextEquipments.Count; i++)
             {
                 if (slot.targetIndicator.active)
                     break;

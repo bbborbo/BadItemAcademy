@@ -212,17 +212,23 @@ namespace BadItemAcademy
 
         void Start()
         {
+            if (GetBuffDef() == null)
+                return;
             if(AegisUseFortification.Value == true)
                 body?.healthComponent?.AddOnTakeDamageServerReceiver(this);
         }
         void OnDestroy()
         {
+            if (GetBuffDef() == null)
+                return;
             body?.healthComponent?.RemoveOnTakeDamageServerReceiver(this);
             this.body.SetBuffCount(GetBuffDef().buffIndex, 0);
         }
 
         public void CumulateBarrierDecay(HealthComponent healthComponent, float barrierDecayed)
         {
+            if (GetBuffDef() == null)
+                return;
             if (healthComponent == this.healthComponent)
             {
                 OnBarrierDecayed(barrierDecayed);
@@ -231,6 +237,8 @@ namespace BadItemAcademy
 
         public void OnBarrierDecayed(float barrierDecayed)
         {
+            if (GetBuffDef() == null)
+                return;
             if (isAtFullFortification)
                 return;
             decayedBarrierCumulative += barrierDecayed * AegisConversionRate.Value;
@@ -267,6 +275,8 @@ namespace BadItemAcademy
 
         public void OnTakeDamageServer(DamageReport damageReport)
         {
+            if (GetBuffDef() == null)
+                return;
             //if (damageReport.attacker == damageReport.victim)
             //    return;
             if (damageReport.damageInfo.damageType.damageType == DamageType.Silent)

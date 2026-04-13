@@ -26,9 +26,9 @@
     <PackageReference Include="R2API.RecalculateStats" Version="1.6.5" />
   </ItemGroup>
   
-  <Target Name="Weave" AfterTargets="PostBuildEvent">
+  <!--<Target Name="Weave" AfterTargets="PostBuildEvent">
     <Copy SourceFiles="$(OutDir)$(TargetFileName)" DestinationFolder="$(PatchDir)" />
     <Copy SourceFiles="$(OutDir)$(TargetName).pdb" DestinationFolder="$(PatchDir)" />
     <Exec Command="Unity.UNetWeaver.exe &quot;$(PatchDir)libs\UnityEngine.CoreModule.dll&quot; &quot;$(PatchDir)libs\com.unity.multiplayer-hlapi.Runtime.dll&quot; &quot;$(ProjectDir)Patched&quot; &quot;$(TargetFileName)&quot; &quot;&quot;" WorkingDirectory="$(PatchDir)" />
-  </Target>
+  </Target>-->
 </Project>

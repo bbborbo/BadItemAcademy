@@ -227,8 +227,6 @@ namespace BadItemAcademy
         private static void AddBhaosWidget(On.RoR2.UI.HUD.orig_Awake orig, RoR2.UI.HUD self)
         {
             orig(self);
-            if (!NetworkServer.active)
-                return;
 
             GameObject chaosHud = new GameObject("BIA_BottledChaosHUD");
             chaosHud.layer = LayerMask.NameToLayer("UI");
@@ -260,14 +258,16 @@ namespace BadItemAcademy
             c.EmitDelegate<Func<int, EquipmentSlot, int>>((stack, equipmentSlot) => 
             {
                 int totalActivations = GetBhaosActivationCountFromBhaosStacks(stack);
+                if (totalActivations <= 0)
+                    return 0;
                 int remainingActivations = totalActivations;
 
-                if(totalActivations > 0 && equipmentSlot.characterBody.TryGetComponent(out BottleChaosItemBehavior itemBehavior))
+                if(equipmentSlot.characterBody.TryGetComponent(out BottleChaosItemBehavior itemBehavior))
                 {
                     BottleChaosBodyAttachment bodyAttachment = itemBehavior.bodyAttachmentComponent;
                     //this way of doing things allows a widget-equipment to be substituted for a random one, if the widget-equipment cannot be used
                     //it should not allow 
-                    for(int i = 0; i < totalActivations && i < bodyAttachment.nextEquipments.Length; i++)
+                    for(int i = 0; i < totalActivations && i < bodyAttachment.nextEquipments.Count; i++)
                     {
                         EquipmentDef def = EquipmentCatalog.GetEquipmentDef((EquipmentIndex)bodyAttachment.nextEquipments[i]);
                         if (equipmentSlot.PerformEquipmentAction(def))

@@ -178,7 +178,7 @@ namespace BadItemAcademy.Components
 
 			//EquipmentDef nextDef = EquipmentCatalog.GetEquipmentDef((EquipmentIndex)behavior.bodyAttachmentComponent.nextEquipments);
 			//iconSlots[0].UpdateIcon(nextDef);
-			for (int i = 0; i < iconSlots.Length && i < behavior.bodyAttachmentComponent.nextEquipments.Length; i++)
+			for (int i = 0; i < iconSlots.Length && i < behavior.bodyAttachmentComponent.nextEquipments.Count; i++)
             {
 				EquipmentDef nextDef = EquipmentCatalog.GetEquipmentDef((EquipmentIndex)behavior.bodyAttachmentComponent.nextEquipments[i]);
 				iconSlots[i].UpdateIcon(nextDef);

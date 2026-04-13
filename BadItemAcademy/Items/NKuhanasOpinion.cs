@@ -98,6 +98,9 @@ namespace BadItemAcademy
             c.Emit(OpCodes.Ldc_R4, NkuhanaMaxRange.Value);
         }
 
+        /// <summary>
+        /// changes nkuhana to calculate soul energy as a proportion of your leveled base health and shield
+        /// </summary>
         public static void FixNkuahanHealth(ILCursor c)
         {
             bool b2 = c.TryGotoNext(MoveType.Before,
