@@ -77,6 +77,8 @@ namespace BadItemAcademy
                 RehabAegis();
             if (Bindings.BindSection("Bottled Chaos"))
                 RehabBottledChaos();
+            if (Bindings.BindSection("Substandard Duplicator"))
+                RehabSuplicator();
 
             if(Bindings.AprilFools ? Bindings.DontUseAprilFools.Value : Bindings.UseAprilFools.Value)
                 CloverChanges();

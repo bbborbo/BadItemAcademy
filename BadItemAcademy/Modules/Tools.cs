@@ -84,6 +84,7 @@ namespace BadItemAcademy.Modules
         internal static ConfigEntry<bool> AegisRevertHealingReduction { get; set; }
         internal static ConfigEntry<bool> AegisUseFortification { get; set; }
 
+        internal static ConfigEntry<int> SuplicatorTempExtension   { get; set; }
         internal static ConfigEntry<int> ChaosBonusBase   { get; set; }
         internal static ConfigEntry<int> ChaosBonusStack  { get; set; }
         internal static ConfigEntry<int> ChaosWidgetCount { get; set; }
@@ -327,6 +328,15 @@ namespace BadItemAcademy.Modules
                 _ChaosQueueAllowTricorn,
                 "Vanilla is FALSE. If set to TRUE, the equipment Trophy Hunters Tricorn will be " +
                     "added to the pool of equipments that can be chosen by the Bottled Chaos Queue-Widget."
+                );
+            #endregion
+            #region suplicator
+            SuplicatorTempExtension = CustomConfigFile.Bind(
+                section + "Bottled Chaos",
+                "Bottled Chaos Bonus Activations (Base)",
+                _SuplicatorTempExtension,
+                "Vanilla is 10. " +
+                    "Determines the amount of additional time per temporary item stack granted by Substandard Duplicator."
                 );
             #endregion
 
