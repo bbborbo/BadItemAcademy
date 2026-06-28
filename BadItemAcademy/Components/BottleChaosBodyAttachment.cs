@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
-using static BadItemAcademy.Bindings;
+using static BadItemAcademy.Modules.Bindings;
 
 namespace BadItemAcademy.Components
 {
@@ -19,37 +19,57 @@ namespace BadItemAcademy.Components
         {
             get
             {
-                if(_attachedBody == null)
-                    attachedBody = this.transform.parent.GetComponent<CharacterBody>();
+                return _attachedBody;
+                if (_attachedBody == null && this.transform != null)
+                {
+                    Transform parent = this.transform.GetParent();
+                    if (parent != null)
+                        attachedBody = parent.GetComponent<CharacterBody>();
+                }
                 return _attachedBody;
             }
             set
             {
-                _attachedBody = value;
-                if (attachedBody.inventory)
+                if(attachedBody != value)
                 {
-                    attachedBody.inventory.onInventoryChanged += RecalculateEquipmentFireCounts;
+                    Inventory.onInventoryChangedGlobal -= OnInventoryChangedGlobal;
+                }
+                _attachedBody = value;
+                if (attachedBody != null && attachedBody.inventory != null)
+                {
+                    Inventory.onInventoryChangedGlobal += OnInventoryChangedGlobal;
                     RecalculateEquipmentFireCounts();
                 }
             }
         }
 
+        private void OnInventoryChangedGlobal(Inventory inv)
+        {
+            if (attachedBody == null || inv.characterBody != attachedBody)
+                return;
+            RecalculateEquipmentFireCounts();
+        }
+
         private void RecalculateEquipmentFireCounts()
         {
-            Inventory inv = attachedBody != null ? attachedBody.inventory : null;
+            if (attachedBody == null)
+                return;
+            Inventory inv = attachedBody.inventory;
             if (inv == null)
                 return;
+
             int cached = BadItemAcademyPlugin.GetBhaosActivationCountFromBhaosStacks(inv.GetItemCountEffective(DLC1Content.Items.RandomEquipmentTrigger));
             if (cachedActivationCount != cached)
                 BottleChaosWidget.RefreshAll();
+
             cachedActivationCount = cached;
-            cachedGestureCount = attachedBody.inventory.GetItemCountEffective(RoR2Content.Items.AutoCastEquipment);
+            cachedGestureCount = inv.GetItemCountEffective(RoR2Content.Items.AutoCastEquipment);
         }
 
         public void Awake()
         {
             nextEquipments = new SyncListInt();
-            for(int i = 0; i < ChaosWidgetCount.Value; i++)
+            for(int i = 0; i < BadItemAcademyPlugin.ChaosWidgetCountFinal; i++)
                 nextEquipments.Add(0);
         }
         public void OnEnable()
@@ -60,14 +80,8 @@ namespace BadItemAcademy.Components
         public void OnDisable()
         {
             UpdateNextEquipmentDef(false);
-            if (attachedBody && attachedBody.inventory)
-                attachedBody.inventory.onInventoryChanged -= RecalculateEquipmentFireCounts;
-
-        }
-        void Start()
-        {
-            if (this.transform.GetParent() != null)
-                attachedBody = this.transform.parent.GetComponent<CharacterBody>();
+            attachedBody = null;
+            Inventory.onInventoryChangedGlobal -= OnInventoryChangedGlobal;
         }
 
         public EquipmentIndex GetRandomEquipment(Xoroshiro128Plus rng, int offset)

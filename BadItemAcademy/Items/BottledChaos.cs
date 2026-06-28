@@ -12,7 +12,7 @@ using Mono.Cecil.Cil;
 using RoR2.Artifacts;
 using UnityEngine.AddressableAssets;
 using RoR2.UI;
-using static BadItemAcademy.Bindings;
+using static BadItemAcademy.Modules.Bindings;
 using R2API;
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
@@ -47,6 +47,7 @@ namespace BadItemAcademy
         }
         internal static readonly Xoroshiro128Plus globalBottledChaosEquipmentRng = new Xoroshiro128Plus(0UL);
         public static List<EquipmentIndex> bottledChaosWidgetValidEquipment = new List<EquipmentIndex>();
+        internal static int ChaosWidgetCountFinal => isExperimentalMode ? 1 : ChaosWidgetCount.Value;
         internal static int _ChaosBonusBase = 1;
         internal static int _ChaosBonusStack = 1;
         internal static int _ChaosWidgetCount = 1;
@@ -57,11 +58,14 @@ namespace BadItemAcademy
         internal static bool _ChaosQueueAllowTricorn = true;
         internal static bool _ChaosQueueAllowLunar = false;
         internal static bool _ChaosQueueAllowEgg = true;
+        public const float chaosCycleIntervalExperimental = 7f;
+        public const float chaosCooldownMultiplierExperimental = 0.67f;
+        public static string chaosEquipCdrExperimental = $"{(1 - chaosCooldownMultiplierExperimental) * 100}%";
         public static void RehabBottledChaos()
         {
             CreateBottleChaosBodyAttachment();
 
-            if(true)//ChaosWidgetCount.Value > 0)
+            if(ChaosWidgetCountFinal > 0)
             {
                 RoR2.Run.onRunStartGlobal += GenerateChaosWidgetEquipmentList;
                 On.RoR2.UI.HUD.Awake += AddBhaosWidget;
@@ -70,6 +74,15 @@ namespace BadItemAcademy
                 //Stage.onStageStartGlobal += RefreshChaosWidgetsOnStageStart;
                 On.RoR2.CharacterMaster.OnBodyStart += OnPlayerBodyStart;
                 //On.RoR2.CharacterBody.OnInventoryChanged += OnPlayerBodyInventoryChange;
+            }
+            if (isExperimentalMode)
+            {
+                On.RoR2.Inventory.CalculateEquipmentCooldownScale += BottledChaosCdrExperimental;
+                LanguageAPI.Add("ITEM_RANDOMEQUIPMENTTRIGGER_DESC",
+                    $"Activating your equipment triggers an additonal <style=cIsDamage>random effect</style>, " +
+                    $"changing every <style=cIsDamage>{chaosCycleIntervalExperimental}</style> seconds. " +
+                    $"<style=cIsUtility>Reduce equipment cooldown</style> by " +
+                    $"<style=cIsUtility>0%</style> <style=cStack>(+{chaosEquipCdrExperimental} per stack)</style>.");
             }
 
             IL.RoR2.EquipmentSlot.FireBossHunter += FixBossHunterChaos;
@@ -81,6 +94,15 @@ namespace BadItemAcademy
                     equip.canBeRandomlyTriggered = false;
                 }
             });
+        }
+
+        private static float BottledChaosCdrExperimental(On.RoR2.Inventory.orig_CalculateEquipmentCooldownScale orig, Inventory self)
+        {
+            float scale = orig(self);
+            int chaosCount = self.GetItemCountEffective(DLC1Content.Items.RandomEquipmentTrigger) - 1;
+            if (chaosCount > 0)
+                scale *= Mathf.Pow(chaosCooldownMultiplierExperimental, chaosCount);
+            return scale;
         }
 
         //called from plugin awake
@@ -218,6 +240,9 @@ namespace BadItemAcademy
             if (stack == 0)
                 return 0;
 
+            if (isExperimentalMode)
+                return ChaosWidgetCountFinal;
+
             int chaosCountOut = ChaosBonusBase.Value + ChaosBonusStack.Value * (stack - 1);// - _ChaosWidgetCount;
             //CharacterBody cb = equipmentSlot.characterBody;
 
@@ -265,38 +290,42 @@ namespace BadItemAcademy
                 if(equipmentSlot.characterBody.TryGetComponent(out BottleChaosItemBehavior itemBehavior))
                 {
                     BottleChaosBodyAttachment bodyAttachment = itemBehavior.bodyAttachmentComponent;
-                    //this way of doing things allows a widget-equipment to be substituted for a random one, if the widget-equipment cannot be used
-                    //it should not allow 
-                    for(int i = 0; i < totalActivations && i < bodyAttachment.nextEquipments.Count; i++)
+                    if (bodyAttachment)
                     {
-                        EquipmentDef def = EquipmentCatalog.GetEquipmentDef((EquipmentIndex)bodyAttachment.nextEquipments[i]);
-                        if (equipmentSlot.PerformEquipmentAction(def))
+                        //this way of doing things allows a widget-equipment to be substituted for a random one, if the widget-equipment cannot be used
+                        //it should not allow 
+                        for (int i = 0; i < totalActivations && i < bodyAttachment.nextEquipments.Count; i++)
                         {
-                            remainingActivations--;
-
-                            if(def.equipmentIndex == RoR2Content.Equipment.BFG.equipmentIndex)
+                            EquipmentDef def = EquipmentCatalog.GetEquipmentDef((EquipmentIndex)bodyAttachment.nextEquipments[i]);
+                            if (equipmentSlot.PerformEquipmentAction(def))
                             {
-                                ModelLocator component = equipmentSlot.GetComponent<ModelLocator>();
-                                if (component)
+                                remainingActivations--;
+
+                                if (def.equipmentIndex == RoR2Content.Equipment.BFG.equipmentIndex)
                                 {
-                                    Transform modelTransform = component.modelTransform;
-                                    if (modelTransform)
+                                    ModelLocator component = equipmentSlot.GetComponent<ModelLocator>();
+                                    if (component)
                                     {
-                                        CharacterModel component2 = modelTransform.GetComponent<CharacterModel>();
-                                        if (component2)
+                                        Transform modelTransform = component.modelTransform;
+                                        if (modelTransform)
                                         {
-                                            List<GameObject> itemDisplayObjects = component2.GetItemDisplayObjects(DLC1Content.Items.RandomEquipmentTrigger.itemIndex);
-                                            if (itemDisplayObjects.Count > 0)
+                                            CharacterModel component2 = modelTransform.GetComponent<CharacterModel>();
+                                            if (component2)
                                             {
-                                                UnityEngine.Object.Instantiate<GameObject>(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/BFG/ChargeBFG.prefab").WaitForCompletion(), itemDisplayObjects[0].transform);
+                                                List<GameObject> itemDisplayObjects = component2.GetItemDisplayObjects(DLC1Content.Items.RandomEquipmentTrigger.itemIndex);
+                                                if (itemDisplayObjects.Count > 0)
+                                                {
+                                                    UnityEngine.Object.Instantiate<GameObject>(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/BFG/ChargeBFG.prefab").WaitForCompletion(), itemDisplayObjects[0].transform);
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
+
+                        itemBehavior.UpdateNextEquipmentDef();
                     }
-                    bodyAttachment.UpdateNextEquipmentDef();
                 }
 
                 if(remainingActivations == 0)
@@ -318,6 +347,8 @@ namespace BadItemAcademy
         private static ItemDef GetItemDef() => DLC1Content.Items.RandomEquipmentTrigger;
         private GameObject bodyAttachmentObject;
         private BottleChaosBodyAttachment _bodyAttachmentComponent;
+        public float equipmentCycleCountdown = 0;
+        bool starting = false;
         public BottleChaosBodyAttachment bodyAttachmentComponent
         {
             get
@@ -343,15 +374,18 @@ namespace BadItemAcademy
             }
         }
 
-        void UpdateNextEquipmentDef(bool updateAll = false)
+        public void UpdateNextEquipmentDef(bool updateAll = false)
         {
             if (!NetworkServer.active)
                 return;
             if (bodyAttachmentComponent == null)
             {
-                Debug.LogError("BIA: Bottled Chaos Networked Nody Attachment not found!");
+                Debug.LogError("BIA: Bottled Chaos Networked Body Attachment not found!");
                 return;
             }
+            starting = false;
+            equipmentCycleCountdown = BadItemAcademyPlugin.chaosCycleIntervalExperimental;
+            bodyAttachmentComponent.attachedBody = body;
             bodyAttachmentComponent.UpdateNextEquipmentDef(updateAll);
         }
 
@@ -364,15 +398,17 @@ namespace BadItemAcademy
 
         void OnEnable()
         {
-            Debug.LogError("sdfbsdjhbhjsdbvsdv");
             if (NetworkServer.active)
             {
-                Debug.LogError("uuuuu");
                 bodyAttachmentObject = Instantiate(BadItemAcademyPlugin.bottleChaosNetworkedBodyAttachment, body.transform);
                 bodyAttachmentObject.SetActive(true);
                 bodyAttachmentObject.GetComponent<NetworkedBodyAttachment>().AttachToGameObjectAndSpawn(body.gameObject);
                 bodyAttachmentComponent = bodyAttachmentObject.GetComponent<BottleChaosBodyAttachment>();
+                bodyAttachmentComponent.attachedBody = body;
                 UpdateNextEquipmentDef(true);
+
+                equipmentCycleCountdown = 1;
+                starting = true;
             }
             //if (NetworkServer.active)
             //    EquipmentSlot.onServerEquipmentActivated += OnServerEquipmentActivated;
@@ -383,6 +419,18 @@ namespace BadItemAcademy
             if(NetworkServer.active)
                 UpdateNextEquipmentDef();
             //EquipmentSlot.onServerEquipmentActivated -= OnServerEquipmentActivated;
+        }
+
+        void FixedUpdate()
+        {
+            if (!NetworkServer.active)
+                return;
+            if (!BadItemAcademyPlugin.isExperimentalMode && !starting)
+                return;
+
+            equipmentCycleCountdown -= Time.fixedDeltaTime;
+            if (equipmentCycleCountdown <= 0)
+                UpdateNextEquipmentDef(true);
         }
     }
 }

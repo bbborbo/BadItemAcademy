@@ -68,7 +68,7 @@ namespace BadItemAcademy.Components
 		private void Awake()
 		{
 			instancesList.Add(this);
-			iconSlots = new EquipmentIconSlot[Bindings.ChaosWidgetCount.Value];
+			iconSlots = new EquipmentIconSlot[BadItemAcademyPlugin.ChaosWidgetCountFinal];
 
 			RectTransform rectTransform = this.gameObject.AddComponent<RectTransform>();
 			//bottom right

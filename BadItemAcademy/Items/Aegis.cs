@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
 using static R2API.RecalculateStatsAPI;
-using static BadItemAcademy.Bindings;
+using static BadItemAcademy.Modules.Bindings;
 
 using RoR2.Items;
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
@@ -19,8 +19,12 @@ namespace BadItemAcademy
     public partial class BadItemAcademyPlugin
     {
 
-        public static BuffDef AegisFortificationBuff;
+        public static BuffDef AegisFortificationBuff => Modules.CommonAssets.AegisFortificationBuff;
 
+        /// <summary>
+        /// This is used by the itembehavior to check if both the broad aegis config is enabled and that the fortification config in particular is enabled
+        /// </summary>
+        internal static bool AegisFortificationEnabled = false;
         internal static float _AegisConversionInterval = 1f;
         internal static float _AegisConversionRate = 1f;
         internal static float _AegisRemovalRate = 1f;
@@ -31,21 +35,12 @@ namespace BadItemAcademy
         internal static bool _AegisRevertHealingReduction = true;
         internal static bool _AegisUseFortification = true;
 
-        internal static float incomingHealingCache = 0;
-        internal static float modifiedHealingCache = 0;
-        internal static float barrierDecayedCache = 0;
+        private static float incomingHealingCache = 0;
+        private static float modifiedHealingCache = 0;
+        private static float barrierDecayedCache = 0;
         public static void RehabAegis()
         {
-            AegisFortificationBuff = ScriptableObject.CreateInstance<BuffDef>();
-            AegisFortificationBuff.name = "bdBarrierFortification";
-            AegisFortificationBuff.iconSprite = mainAssetBundle.LoadAsset<Sprite>("Assets/Textures/Icons/Buff/aegisbarrier.png");
-            // Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/texBuffGenericShield.tif").WaitForCompletion();
-            AegisFortificationBuff.buffColor = Color.white;
-            AegisFortificationBuff.canStack = true;
-            AegisFortificationBuff.isDebuff = false;
-            AegisFortificationBuff.stackingDisplayMethod = BuffDef.StackingDisplayMethod.Percentage;
-
-            ContentAddition.AddBuffDef(AegisFortificationBuff);
+            if(AegisUseFortification.Value) AegisFortificationEnabled = true;
 
             GetStatCoefficients += AegisStatCoefficients;
 
@@ -212,14 +207,14 @@ namespace BadItemAcademy
 
         void Start()
         {
-            if (GetBuffDef() == null)
+            if (BadItemAcademyPlugin.AegisFortificationEnabled == false)
                 return;
             if(AegisUseFortification.Value == true)
                 body?.healthComponent?.AddOnTakeDamageServerReceiver(this);
         }
         void OnDestroy()
         {
-            if (GetBuffDef() == null)
+            if (BadItemAcademyPlugin.AegisFortificationEnabled == false)
                 return;
             body?.healthComponent?.RemoveOnTakeDamageServerReceiver(this);
             this.body.SetBuffCount(GetBuffDef().buffIndex, 0);
@@ -227,7 +222,7 @@ namespace BadItemAcademy
 
         public void CumulateBarrierDecay(HealthComponent healthComponent, float barrierDecayed)
         {
-            if (GetBuffDef() == null)
+            if (BadItemAcademyPlugin.AegisFortificationEnabled == false)
                 return;
             if (healthComponent == this.healthComponent)
             {
@@ -237,7 +232,7 @@ namespace BadItemAcademy
 
         public void OnBarrierDecayed(float barrierDecayed)
         {
-            if (GetBuffDef() == null)
+            if (BadItemAcademyPlugin.AegisFortificationEnabled == false)
                 return;
             if (isAtFullFortification)
                 return;
@@ -275,7 +270,7 @@ namespace BadItemAcademy
 
         public void OnTakeDamageServer(DamageReport damageReport)
         {
-            if (GetBuffDef() == null)
+            if (BadItemAcademyPlugin.AegisFortificationEnabled == false)
                 return;
             //if (damageReport.attacker == damageReport.victim)
             //    return;

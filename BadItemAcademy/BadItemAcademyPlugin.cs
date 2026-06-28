@@ -17,7 +17,9 @@ using System.Security.Permissions;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
-using static BadItemAcademy.Assets;
+using static BadItemAcademy.Modules.Bindings;
+using BadItemAcademy.Modules;
+using System.Runtime.CompilerServices;
 
 #pragma warning disable CS0618 // Type or member is obsolete
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -29,6 +31,7 @@ namespace BadItemAcademy
     [BepInDependency(R2API.LanguageAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.RecalculateStatsAPI.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(R2API.ContentManagement.R2APIContentManager.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency("com.RiskOfBrainrot.RiskierRain", BepInDependency.DependencyFlags.SoftDependency)]
 
     [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.EveryoneNeedSameModVersion)]
     [R2APISubmoduleDependency(nameof(ContentAddition))]
@@ -47,7 +50,7 @@ namespace BadItemAcademy
             get
             {
                 if (_mainAssetBundle == null)
-                    _mainAssetBundle = LoadAssetBundle("baditemrehab");
+                    _mainAssetBundle = Modules.Assets.LoadAssetBundle("baditemrehab");
                 return _mainAssetBundle;
             }
             set
@@ -56,11 +59,13 @@ namespace BadItemAcademy
             }
         }
 
+        public static bool isExperimentalMode => Tools.isLoaded("com.RiskOfBrainrot.RiskierRain");
 
         void Awake()
         {
             PInfo = this.Info;
             Bindings.Init();
+            CommonAssets.Init();
 
             if(Bindings.BindSection("NKuhanas Opinion"))
                 RehabNkuhanas();
@@ -68,7 +73,7 @@ namespace BadItemAcademy
                 RehabSingularityBand();
             if (Bindings.BindSection("Benthic Bloom"))
                 RehabBenthic();
-            if (Bindings.BindSection("Aegis"))
+            if (Bindings.BindSection("Aegis") && !isExperimentalMode)
                 RehabAegis();
             if (Bindings.BindSection("Bottled Chaos"))
                 RehabBottledChaos();

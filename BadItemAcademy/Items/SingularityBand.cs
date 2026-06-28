@@ -15,7 +15,7 @@ using System.Security.Permissions;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
-using static BadItemAcademy.Bindings;
+using static BadItemAcademy.Modules.Bindings;
 
 namespace BadItemAcademy
 {
