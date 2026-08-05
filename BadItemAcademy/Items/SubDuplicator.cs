@@ -1,5 +1,6 @@
 ﻿using BadItemAcademy.Modules;
 using MonoMod.Cil;
+using R2API;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -12,6 +13,14 @@ namespace BadItemAcademy
         public static void RehabSuplicator()
         {
             IL.RoR2.Items.DuplicatorBehavior.CalculateNewItemDecayDuration += ModifySuplicatorExtension;
+
+            LanguageAPI.Add("ITEM_DUPLICATOR_DESC", 
+                $"<style=cIsUtility>Picking up an item</style> gives you a " +
+                $"<style=cIsTemporary>temporary copy</style> of itself. " +
+                $"Temporary items last an additional " +
+                $"<style=cIsDamage>{Bindings.SuplicatorTempExtension.Value} " +
+                $"<style=cStack>(+{Bindings.SuplicatorTempExtension.Value} per stack)</style> " +
+                $"seconds</style>.");
         }
 
         private static void ModifySuplicatorExtension(ILContext il)

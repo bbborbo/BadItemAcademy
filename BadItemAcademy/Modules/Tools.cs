@@ -332,7 +332,7 @@ namespace BadItemAcademy.Modules
             #endregion
             #region suplicator
             SuplicatorTempExtension = CustomConfigFile.Bind(
-                section + "Bottled Chaos",
+                section + "Substandard Duplicator",
                 "Bottled Chaos Bonus Activations (Base)",
                 _SuplicatorTempExtension,
                 "Vanilla is 10. " +
