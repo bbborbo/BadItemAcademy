@@ -1,4 +1,5 @@
 ﻿using BadItemAcademy.Modules;
+using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using R2API;
 using System;
@@ -38,7 +39,8 @@ namespace BadItemAcademy
                 return;
             }
             c.Index++;
-            c.Next.Operand = Bindings.SuplicatorTempExtension.Value;
+            c.Remove();
+            c.Emit(OpCodes.Ldc_I4, Bindings.SuplicatorTempExtension.Value);
         }
     }
 }

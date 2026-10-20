@@ -57,23 +57,36 @@ namespace BadItemAcademy.Modules
 
         public static bool BindSection(string sectionName)
         {
-            return CustomConfigFile.Bind<bool>("Bad Item Academy : Full Section Config",
+            return CustomConfigFile.Bind<bool>(": Full Section Config",
                 sectionName,
                 true,
                 "Vanilla is FALSE. Set to false if you wish to disable changes made to an entire item or group of items.").Value;
         }
         internal static ConfigFile CustomConfigFile { get; set; }
-        internal static ConfigEntry<bool> PoolHealingBeforeModifiers { get; set; }
-        internal static ConfigEntry<bool> PoolHealingAfterIncrease { get; set; }
+        internal static ConfigEntry<bool> DontUseAprilFools { get; set; }
+        internal static ConfigEntry<bool> UseAprilFools { get; set; }
+
+        internal static ConfigEntry<bool> NkuhanaBypassEclipse { get; set; }
+        internal static ConfigEntry<bool> CorpsebloomBypassEclipse { get; set; }
+        internal static ConfigEntry<bool> AegisBypassEclipse { get; set; }
+        internal static ConfigEntry<bool> ScimitarBypassEclipse { get; set; }
+
         internal static ConfigEntry<float> VoidBandDamageMult { get; set; }
         internal static ConfigEntry<float> VoidBandProcCoeff { get; set; }
+
         internal static ConfigEntry<float> NkuhanaDamageMultiplier { get; set; }
         internal static ConfigEntry<float> NkuhanaProcCoefficient { get; set; }
         internal static ConfigEntry<float> NkuhanaMaxRange { get; set; }
         internal static ConfigEntry<bool> ChangeNkuhanaHealthCalculation { get; set; }
+        /// <summary>
+        /// Deprecated
+        /// </summary>
+        internal static ConfigEntry<bool> PoolHealingAfterIncrease { get; set; }
+
         internal static ConfigEntry<bool> ShouldBenthicWeighSelection { get; set; }
         internal static ConfigEntry<bool> InvertBenthicWeightedSelection { get; set; }
         internal static ConfigEntry<bool> BiasBenthicWeightedSelection { get; set; }
+
         internal static ConfigEntry<float> AegisConversionInterval { get; set; }
         internal static ConfigEntry<float> AegisConversionRate { get; set; }
         internal static ConfigEntry<float> AegisRemovalRate { get; set; }
@@ -81,10 +94,9 @@ namespace BadItemAcademy.Modules
         internal static ConfigEntry<int> AegisMaxFortificationStacks { get; set; }
         internal static ConfigEntry<float> AegisMaxStatBonusBase { get; set; }
         internal static ConfigEntry<float> AegisMaxStatBonusStack { get; set; }
-        internal static ConfigEntry<bool> AegisRevertHealingReduction { get; set; }
-        internal static ConfigEntry<bool> AegisUseFortification { get; set; }
 
         internal static ConfigEntry<int> SuplicatorTempExtension   { get; set; }
+
         internal static ConfigEntry<int> ChaosBonusBase   { get; set; }
         internal static ConfigEntry<int> ChaosBonusStack  { get; set; }
         internal static ConfigEntry<int> ChaosWidgetCount { get; set; }
@@ -94,14 +106,49 @@ namespace BadItemAcademy.Modules
         internal static ConfigEntry<bool> ChaosQueueAllowTricorn   { get; set; }
         internal static ConfigEntry<bool> ChaosQueueAllowLunar     { get; set; }
         internal static ConfigEntry<bool> ChaosQueueAllowEgg       { get; set; }
-        internal static ConfigEntry<bool> DontUseAprilFools { get; set; }
-        internal static ConfigEntry<bool> UseAprilFools { get; set; }
+
+        internal static ConfigEntry<bool> UseAlternateGloop { get; set; }
+        internal static ConfigEntry<float> GloopSimpleHealthThreshold { get; set; }
+        internal static ConfigEntry<float> GloopDamageCoefficient { get; set; }
+        internal static ConfigEntry<float> GloopSimpleRechargeTimeBase { get; set; }
+        internal static ConfigEntry<float> GloopAlternateRechargeTimeBase { get; set; }
+
         public static void Init()
         {
-            string section = "Bad Item Rehabilitation : ";
+            string section = "";
 
             CustomConfigFile = new ConfigFile(Paths.ConfigPath + $"\\{modName}.cfg", true);
             CustomConfigFile.SaveOnConfigSet = false;
+            #region eclipse healing
+            AegisBypassEclipse = CustomConfigFile.Bind(
+                section + "Aegis",
+                "Bypass Eclipse Healing Reductions",
+                true,
+                "Vanilla is FALSE. If set to TRUE, Aegis will revert any healing cuts made by modifiers like Eclipse 5 when " +
+                    "applying overheal to barrier."
+                );
+            NkuhanaBypassEclipse = CustomConfigFile.Bind(
+                section + "NKuhanas Opinion",
+                "Bypass Eclipse Healing Reductions",
+                true,
+                "Vanilla is FALSE. If set to TRUE, Nkuhanas Opinion will revert any healing cuts made by modifiers like Eclipse 5 when " +
+                    "adding to the Soul Energy pool."
+                );
+            CorpsebloomBypassEclipse = CustomConfigFile.Bind(
+                section + "Corpsebloom",
+                "Bypass Eclipse Healing Reductions",
+                true,
+                "Vanilla is FALSE. If set to TRUE, Corpsebloom will revert any healing cuts made by modifiers like Eclipse 5 when " +
+                    "adding to the Corpsebloom Healing pool."
+                );
+            ScimitarBypassEclipse = CustomConfigFile.Bind(
+                section + "Stained Scimitar",
+                "Bypass Eclipse Healing Reductions",
+                true,
+                "Vanilla is FALSE. If set to TRUE, Stained Scimitar will revert any healing cuts made by modifiers like Eclipse 5 when " +
+                    "generating Scimitar Projectiles."
+                );
+            #endregion
             #region aegis
             AegisConversionInterval = CustomConfigFile.Bind(
                 section + "Aegis",
@@ -153,20 +200,6 @@ namespace BadItemAcademy.Modules
                 "Determines the amount Aegis increases ALL STATS with full Fortification with additional stacks of Aegis. " +
                     "Scales linearly, represented as a percent. "
                 );
-            AegisRevertHealingReduction = CustomConfigFile.Bind(
-                section + "Aegis",
-                "Should Aegis Revert Healing Reductions When Converting To Barrier?",
-                _AegisRevertHealingReduction,
-                "Vanilla is FALSE. If set to TRUE, Aegis will revert any healing cuts made by modifiers like Eclipse 5 when " +
-                    "applying overheal to barrier."
-                );
-            AegisUseFortification = CustomConfigFile.Bind(
-                section + "Aegis",
-                "Should Aegis Use Fortification?",
-                _AegisUseFortification,
-                "Vanilla is FALSE. If set to TRUE, Aegis will turn all decayed barrier into a stat buff called Fortification. " +
-                    "Fortification boosts ALL stats, but is reduced when taking damage by an amount proportional to your max health."
-                );
             #endregion
             #region benthic
             ShouldBenthicWeighSelection = CustomConfigFile.Bind(
@@ -197,21 +230,6 @@ namespace BadItemAcademy.Modules
                 );
             #endregion
             #region nkuhanas
-            PoolHealingBeforeModifiers = CustomConfigFile.Bind(
-                section + "NKuhanas Opinion",
-                "Pool Healing Before Modifiers (Affects Corpsebloom)",
-                _PoolHealingBeforeModifiers,
-                "Vanilla is FALSE. If set to TRUE, Nkuhanas Opinion and Corpsebloom will be changed " +
-                    "to pool their healing before other healing modifiers. " +
-                    "In Corpsebloom's case, this removes the double dipping effect with Rejuvenation Rack and Eclipse 5."
-                );
-            PoolHealingAfterIncrease = CustomConfigFile.Bind(
-                section + "NKuhanas Opinion",
-                "Pool Healing After Increase (Affects Corpsebloom)",
-                _PoolHealingAfterIncrease,
-                "(Requires Pool Healing Before Modifiers to be TRUE) If set to TRUE, Nkuhanas Opinion and Corpsebloom will be changed " +
-                    "to pool after Rejuvenation Rack is applied, but before Eclipse 5. "
-                );
             ChangeNkuhanaHealthCalculation = CustomConfigFile.Bind(
                 section + "NKuhanas Opinion",
                 "Change NKuhana Base Damage Calculation",
@@ -287,21 +305,21 @@ namespace BadItemAcademy.Modules
                     "as well as some equipments that cannot be triggered at random, such as Recycler."
                 );
             ChaosBlacklistEgg = CustomConfigFile.Bind(
-                section + "Bottled Chaos : Random Activation Pool",
+                section + "Bottled Chaos",
                 "Allow Random Activations Of Volcanic Egg?",
                 _ChaosBlacklistEgg,
                 "Vanilla is FALSE. If set to TRUE, the equipment Volcanic Egg will not be allowed to activate at random." +
                     "Note that the Widget may be allowed to choose Volcanic Egg unless the relevant setting is changed."
                 );
             ChaosQueueAllowLunar = CustomConfigFile.Bind(
-                section + "Bottled Chaos : Queued Activation Pool",
+                section + "Bottled Chaos",
                 "Allow Queued Activations Of Lunar Equipments?",
                 _ChaosQueueAllowLunar,
                 "Vanilla is FALSE. If set to TRUE, all Lunar-tier equipments in the Enigma Artifact pool will be " +
                     "added to the pool of equipments that can be chosen by the Bottled Chaos Queue-Widget."
                 );
             ChaosQueueAllowEgg = CustomConfigFile.Bind(
-                section + "Bottled Chaos : Queued Activation Pool",
+                section + "Bottled Chaos",
                 "Allow Queued Activations Of Volcanic Egg?",
                 _ChaosQueueAllowEgg,
                 "Vanilla is TRUE. If the equipment Volcanic Egg is disallowed from random activations, " +
@@ -309,21 +327,21 @@ namespace BadItemAcademy.Modules
                     "Set both to FALSE if you wish for Volcanic Egg to be eradicated from existence."
                 );
             //ChaosQueueAllowCapacitor = CustomConfigFile.Bind(
-            //    section + "Bottled Chaos : Queued Activation Pool",
+            //    section + "Bottled Chaos",
             //    "Allow Queued Activations Of Royal Capacitor?",
             //    _ChaosQueueAllowCapacitor,
             //    "Vanilla is FALSE. If set to TRUE, the equipment Royal Capacitor will be " +
             //        "added to the pool of equipments that can be chosen by the Bottled Chaos Queue-Widget."
             //    );
             ChaosQueueAllowRecycler = CustomConfigFile.Bind(
-                section + "Bottled Chaos : Queued Activation Pool",
+                section + "Bottled Chaos",
                 "Allow Queued Activations Of Recycler?",
                 _ChaosQueueAllowRecycler,
                 "Vanilla is FALSE. If set to TRUE, the equipment Recycler will be " +
                     "added to the pool of equipments that can be chosen by the Bottled Chaos Queue-Widget."
                 );
             ChaosQueueAllowTricorn = CustomConfigFile.Bind(
-                section + "Bottled Chaos : Queued Activation Pool",
+                section + "Bottled Chaos",
                 "Allow Queued Activations Of Trophy Hunters Tricorn?",
                 _ChaosQueueAllowTricorn,
                 "Vanilla is FALSE. If set to TRUE, the equipment Trophy Hunters Tricorn will be " +
@@ -333,17 +351,44 @@ namespace BadItemAcademy.Modules
             #region suplicator
             SuplicatorTempExtension = CustomConfigFile.Bind(
                 section + "Substandard Duplicator",
-                "Bottled Chaos Bonus Activations (Base)",
+                "Substandard Duplicator Temporary Item Duration Extension",
                 _SuplicatorTempExtension,
                 "Vanilla is 10. " +
                     "Determines the amount of additional time per temporary item stack granted by Substandard Duplicator."
+                );
+            #endregion
+            #region gloop
+            UseAlternateGloop = CustomConfigFile.Bind(
+                section + "Genesis Loop",
+                "Genesis Loop Use Alternate Rework",
+                _UseAlternateGloop,
+                "If set to false, Genesis Loop will use the 'simple' rework (increased health threshold to activate). " +
+                "If set to true, Genesis Loop will use the 'alternate' rework (fire after a long time spent out of danger)."
+                );
+            GloopSimpleHealthThreshold = CustomConfigFile.Bind(
+                section + "Genesis Loop",
+                "Genesis Loop Simple Health Threshold",
+                _GloopSimpleHealthThreshold,
+                "Vanilla is 0.25. Determines the threshold under which Genesis Loop can activate. Expressed as a fraction of max health."
+                );
+            GloopSimpleRechargeTimeBase = CustomConfigFile.Bind(
+                section + "Genesis Loop",
+                "Genesis Loop Simple Recharge Time",
+                _GloopSimpleRechargeTimeBase,
+                "Vanilla is 15. Determines the time required to recharge Genesis Loop after activation."
+                );
+            GloopAlternateRechargeTimeBase = CustomConfigFile.Bind(
+                section + "Genesis Loop",
+                "Genesis Loop Alternate Recharge Time",
+                _GloopAlternateRechargeTimeBase,
+                "Vanilla is N/A. Determines the time required to pass without taking any damage before firing Genesis Loop."
                 );
             #endregion
 
             AprilFools = DateTime.Now.Month == 4 && DateTime.Now.Day <= 7;
             if (!AprilFools)
             {
-                UseAprilFools = CustomConfigFile.Bind("April Fools",
+                UseAprilFools = CustomConfigFile.Bind(": April Fools",
                     "Use April Fools",
                     false,
                     "Use April Fools' Day changes on days that are not April Fools' Day");
@@ -351,7 +396,7 @@ namespace BadItemAcademy.Modules
             }
             else
             {
-                DontUseAprilFools = CustomConfigFile.Bind("April Fools",
+                DontUseAprilFools = CustomConfigFile.Bind(": April Fools",
                     "Dont Use April Fools",
                     false,
                     "Dont use April Fools Day changes on days that are April Fools Day");

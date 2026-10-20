@@ -70,7 +70,7 @@ namespace BadItemAcademy
                 RoR2.Run.onRunStartGlobal += GenerateChaosWidgetEquipmentList;
                 On.RoR2.UI.HUD.Awake += AddBhaosWidget;
                 On.RoR2.EquipmentSlot.RpcOnClientEquipmentActivationRecieved += UpdateBhaosWidgetClient;
-                IL.RoR2.EquipmentSlot.OnEquipmentExecuted_byte_byte_EquipmentIndex += AlterBhaosFireCount;
+                IL.RoR2.EquipmentSlot.OnEquipmentExecuted_refEquipmentLocation_EquipmentIndex += AlterBhaosFireCount;
                 //Stage.onStageStartGlobal += RefreshChaosWidgetsOnStageStart;
                 On.RoR2.CharacterMaster.OnBodyStart += OnPlayerBodyStart;
                 //On.RoR2.CharacterBody.OnInventoryChanged += OnPlayerBodyInventoryChange;

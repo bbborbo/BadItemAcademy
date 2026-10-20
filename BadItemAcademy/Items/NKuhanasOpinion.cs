@@ -21,27 +21,26 @@ namespace BadItemAcademy
 {
     public partial class BadItemAcademyPlugin
     {
-        internal static bool _PoolHealingBeforeModifiers = true;
-        internal static bool _PoolHealingAfterIncrease = false;
-        internal static float _NkuhanaDamageMultiplier = 3.5f; //2.5
-        internal static float _NkuhanaProcCoefficient = 1.0f; //0.2
-        internal static float _NkuhanaMaxRange = 80f; //40
+        internal static bool _PoolHealingBeforeModifiers => true;
+        internal static bool _PoolHealingAfterIncrease => true;
+        internal static float _NkuhanaDamageMultiplier => 4f; //2.5
+        internal static float _NkuhanaProcCoefficient => 0.5f; //0.2
+        internal static float _NkuhanaMaxRange => 80f; //40
 
         public static void RehabNkuhanas()
         {
-            if (PoolHealingBeforeModifiers.Value)
-                IL.RoR2.HealthComponent.Heal += HealthComponent_Heal_Pooling;
             IL.RoR2.HealthComponent.ServerFixedUpdate += NkuhanasBuff;
 
             LanguageAPI.Add("ITEM_NOVAONHEAL_DESC",
                 $"Store <style=cIsHealing>100%</style> <style=cStack>(+100% per stack)</style> of healing as <style=cIsHealing>Soul Energy</style>. " +
                 $"After your <style=cIsHealing>Soul Energy</style> reaches <style=cIsHealing>10%</style> of your " +
                 (ChangeNkuhanaHealthCalculation.Value ? $"<style=cIsHealing>base health</style>, " : $"<style=cIsHealing>maximum health</style>, ") +
-                $"<style=cIsDamage>fire a skull</style> that deals <style=cIsDamage>{NkuhanaDamageMultiplier.Value * 100}%</style> " +
+                $"<style=cIsDamage>fire a skull</style> that deals <style=cIsDamage>250% <style=cStack>(+250% per stack)</style> damage</style> " +
+                $"plus an amount equal to <style=cIsDamage>{NkuhanaDamageMultiplier.Value * 100}%</style> " +
                 $"of your <style=cIsHealing>Soul Energy</style> as <style=cIsDamage>damage</style>.");
         }
 
-
+        #region stat buffs
         public static void NkuhanasBuff(ILContext il)
         {
             ILCursor c = new ILCursor(il);
@@ -52,6 +51,7 @@ namespace BadItemAcademy
             int index = c.Index;
 
             BuffNkuhanaDamage(c);
+            c.Index = index;
             if (ChangeNkuhanaHealthCalculation.Value)
             {
                 c.Index = index;
@@ -128,7 +128,10 @@ namespace BadItemAcademy
         public static void BuffNkuhanaDamage(ILCursor c)
         {
             bool b1 = c.TryGotoNext(MoveType.Before,
-                x => x.MatchStfld<DevilOrb>(nameof(DevilOrb.damageValue))
+                x => x.MatchStfld<DevilOrb>(nameof(DevilOrb.damageValue)))
+                && c.TryGotoPrev(MoveType.Before,
+                x => x.MatchLdcR4(out _),
+                x => x.MatchStloc(out _)
                 );
 
             if (!b1)
@@ -136,17 +139,19 @@ namespace BadItemAcademy
                 DebugBreakpoint(nameof(BuffNkuhanaDamage));
                 return;
             }
-            c.Index -= 2;
             c.Remove();
             c.Emit(OpCodes.Ldc_R4, NkuhanaDamageMultiplier.Value);
         }
+        #endregion
 
+        #region nightmare nightmare nightmare nightmare
         public static void HealthComponent_Heal_Pooling(ILContext il)
         {
             ILCursor c = new ILCursor(il);
             ILLabel _target = c.DefineLabel();
             ILLabel target = c.DefineLabel();
 
+            //go to where rejuv rack is handled
             bool labelFound = c.TryGotoNext(MoveType.Before,
                 x => x.MatchLdarg(out _),
                 X => X.MatchLdflda<HealthComponent>(nameof(RoR2.HealthComponent.itemCounts)),
@@ -159,6 +164,7 @@ namespace BadItemAcademy
                 return;
             }
 
+            // 
             if (!PoolHealingAfterIncrease.Value ||
                     c.TryGotoNext(MoveType.After, x => x.MatchBle(out target)) == false
                 )
@@ -175,7 +181,8 @@ namespace BadItemAcademy
             int opinionWithinTrue = 1;
             int opinionWithinFalse = 1;
 
-            GetOpinionLabels(c, target, out ILLabel poolStart, out ILLabel poolEnd);
+            if(GetOpinionLabels(c, target, out ILLabel poolStart, out ILLabel poolEnd) == false)
+                return;
 
             HyperSwap(c, target, poolStart, poolEnd,
                 out ILLabel newEnd, out ILLabel newStart, out ILLabel newTarget);
@@ -192,16 +199,17 @@ namespace BadItemAcademy
             int corpseBeforeTrue = 1;
             int corpseBeforeFalse = 1;
             //corpsebloom should be second because that puts it first, and corpsebloom can ret
-            GetCorpsebloomLabels(c, target, out poolStart, out poolEnd);
-
+            if (GetCorpsebloomLabels(c, target, out poolStart, out poolEnd) == false)
+                return;
+            
             HyperSwap(c, target, poolStart, poolEnd,
                 out newEnd, out newStart, out newTarget);
-
+            
             RedirectAllBranchesToLabel(c, poolEnd, newEnd, corpseWithinTrue, ScreamingInternally.Brtrue);
             RedirectAllBranchesToLabel(c, poolEnd, newEnd, corpseWithinFalse, ScreamingInternally.Brfalse);
             RedirectAllBranchesToLabel(c, poolStart, newStart, 1, ScreamingInternally.Blt);
             RedirectAllBranchesToLabel(c, poolStart, newStart, 1, ScreamingInternally.Bne);
-
+            
             //this here fixes the if statement before to not skip our newly emitted branches
             Debug.Log("bia redirecting branches before target to acknowledge inserted code. true search");
             RedirectAllBranchesToLabel(c, _target, newTarget, 1);
@@ -211,6 +219,9 @@ namespace BadItemAcademy
             //Debug.LogWarning(il.ToString());
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public static void HyperSwap(ILCursor c, ILLabel target, ILLabel poolStart, ILLabel poolEnd,
             out ILLabel newEnd, out ILLabel newStart, out ILLabel newTarget)
         {
@@ -221,7 +232,7 @@ namespace BadItemAcademy
             SwapLabel(c, target, poolStart, out newTarget);
         }
 
-        public static void GetOpinionLabels(ILCursor c, ILLabel target, out ILLabel poolStart, out ILLabel poolEnd)
+        public static bool GetOpinionLabels(ILCursor c, ILLabel target, out ILLabel poolStart, out ILLabel poolEnd)
         {
             poolStart = c.DefineLabel();
             poolEnd = c.DefineLabel();
@@ -232,13 +243,14 @@ namespace BadItemAcademy
             //to find the pool start, first go to nova on heal count. this is a unique match
             bool b1 = c.TryGotoNext(MoveType.Before,
                 x => x.MatchLdarg(out _),
+                x => x.MatchLdarg(out _),
                 X => X.MatchLdflda<HealthComponent>(nameof(RoR2.HealthComponent.itemCounts)),
                 x => x.MatchLdfld<HealthComponent.ItemCounts>(nameof(RoR2.HealthComponent.itemCounts.novaOnHeal))
                 );
             if (!b1)
             {
                 DebugBreakpoint(nameof(GetOpinionLabels), 1);
-                return;
+                return false;
             }
             c.MarkLabel(poolStart);
 
@@ -249,11 +261,12 @@ namespace BadItemAcademy
             if (!b2)
             {
                 DebugBreakpoint(nameof(GetOpinionLabels), 2);
-                return;
+                return false;
             }
             c.MarkLabel(poolEnd);
+            return true;
         }
-        public static void GetCorpsebloomLabels(ILCursor c, ILLabel target, out ILLabel poolStart, out ILLabel poolEnd)
+        public static bool GetCorpsebloomLabels(ILCursor c, ILLabel target, out ILLabel poolStart, out ILLabel poolEnd)
         {
             poolStart = c.DefineLabel();
             poolEnd = c.DefineLabel();
@@ -268,7 +281,7 @@ namespace BadItemAcademy
             if (!b1)
             {
                 DebugBreakpoint(nameof(GetCorpsebloomLabels), 1);
-                return;
+                return false;
             }
 
             //next go back up to nonRegen==true. this gets the end of the if statement and places us at the start
@@ -280,10 +293,11 @@ namespace BadItemAcademy
             if (!b2)
             {
                 DebugBreakpoint(nameof(GetCorpsebloomLabels), 2);
-                return;
+                return false;
             }
             poolEnd = end;
             c.MarkLabel(poolStart);
+            return true;
         }
 
         /// <summary>
@@ -379,5 +393,6 @@ namespace BadItemAcademy
             Bne,
             Ble
         }
+        #endregion
     }
 }

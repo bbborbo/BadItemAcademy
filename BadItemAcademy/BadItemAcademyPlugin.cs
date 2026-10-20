@@ -42,7 +42,7 @@ namespace BadItemAcademy
         public const string guid = "com." + teamName + "." + modName;
         public const string teamName = "BadItemCouncil";
         public const string modName = "BadItemRehabilitation";
-        public const string version = "1.3.4";
+        public const string version = "1.4.0";
 
         private static AssetBundle _mainAssetBundle;
         public static AssetBundle mainAssetBundle
@@ -67,6 +67,11 @@ namespace BadItemAcademy
             Bindings.Init();
             CommonAssets.Init();
 
+            if(Bindings.BindSection("Eclipse Healing Items Fix"))
+            {
+
+            }
+
             if(Bindings.BindSection("NKuhanas Opinion"))
                 RehabNkuhanas();
             if (Bindings.BindSection("Singularity Band"))
@@ -79,8 +84,10 @@ namespace BadItemAcademy
                 RehabBottledChaos();
             if (Bindings.BindSection("Substandard Duplicator"))
                 RehabSuplicator();
+            if (Bindings.BindSection("Genesis Loop"))
+                RehabGloop();
 
-            if(Bindings.AprilFools ? Bindings.DontUseAprilFools.Value : Bindings.UseAprilFools.Value)
+            if (Bindings.AprilFools ? Bindings.DontUseAprilFools.Value : Bindings.UseAprilFools.Value)
                 CloverChanges();
 
             Bindings.Save();

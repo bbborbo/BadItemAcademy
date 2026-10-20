@@ -35,12 +35,10 @@ namespace BadItemAcademy
         internal static bool _AegisRevertHealingReduction = true;
         internal static bool _AegisUseFortification = true;
 
-        private static float incomingHealingCache = 0;
-        private static float modifiedHealingCache = 0;
         private static float barrierDecayedCache = 0;
         public static void RehabAegis()
         {
-            if(AegisUseFortification.Value) AegisFortificationEnabled = true;
+            AegisFortificationEnabled = true;
 
             GetStatCoefficients += AegisStatCoefficients;
 
@@ -49,22 +47,18 @@ namespace BadItemAcademy
                 $"Healing past full grants you a <style=cIsHealing>temporary barrier</style> " +
                 $"for <style=cIsHealing>50% <style=cStack>(+50% per stack)</style></style> " +
                 $"of the amount you <style=cIsHealing>healed</style>. " +
-                (AegisUseFortification.Value == false ? "" :
                 $"Every <style=cIsHealing>{AegisForceConversionThreshold.Value * 100}%</style> barrier that decays is converted into " +
                 $"<style=cIsDamage>Fortification</style>, increasing damage, attack speed, and critical strike chance " +
                 $"by up to <style=cIsDamage>{AegisMaxStatBonusBase.Value * 100}%</style> " +
                 $"<style=cStack>(+{AegisMaxStatBonusStack.Value * 100}% per stack)</style>. " +
-                $"<style=cIsDamage>Fortification</style> is lost when taking damage."));
+                $"<style=cIsDamage>Fortification</style> is lost when taking damage.");
 
             IL.RoR2.HealthComponent.ServerFixedUpdate += HealthComponent_ServerFixedUpdate_CumulateBarrierDecay;
-            IL.RoR2.HealthComponent.Heal += HealthComponent_Heal_OverhealToBarrier;
         }
 
 
         private static void AegisStatCoefficients(CharacterBody sender, StatHookEventArgs args)
         {
-            if (AegisUseFortification.Value == false)
-                return;
             int itemCount = sender.inventory?.GetItemCountEffective(RoR2Content.Items.BarrierOnOverHeal) ?? 0;
             int buffCount = sender.GetBuffCount(AegisFortificationBuff);
             if(buffCount > 0 && itemCount > 0)
@@ -79,80 +73,6 @@ namespace BadItemAcademy
                 args.critAdd += statBonus * 100;
                 //args.armorTotalMult += statBonus;
             }
-        }
-
-        private static void HealthComponent_Heal_OverhealToBarrier(ILContext il)
-        {
-            ILCursor c = new ILCursor(il);
-
-            int modifiedHealingLoc = 2;
-
-            //before any changes are made to healing, store the in value. this wont do anything if the other matches/hooks fail
-            bool b1 = c.TryGotoNext(MoveType.After,
-                x => x.MatchLdfld<HealthComponent.ItemCounts>(nameof(HealthComponent.ItemCounts.increaseHealing))
-                )
-                && c.TryGotoNext(MoveType.After,
-                x => x.MatchStarg(1)
-                );
-            if (!b1)
-            {
-                DebugBreakpoint(nameof(HealthComponent_Heal_OverhealToBarrier), 1);
-                c.Index = 0;
-            }
-            else
-            {
-                c.Index++;
-            }
-            c.Emit(OpCodes.Ldarg_1);
-            c.EmitDelegate<Action<float>>((incomingHealing) =>
-            {
-                incomingHealingCache = incomingHealing;
-            });
-
-            //after all modifiers are made to healing, store the modified value before it gets reduced. this wont do anything if the other matches/hooks fail
-            bool b2 = c.TryGotoNext(MoveType.After,
-                x => x.MatchLdarg(1),
-                x => x.MatchStloc(out modifiedHealingLoc)
-                );
-            if (!b2)
-            {
-                DebugBreakpoint(nameof(HealthComponent_Heal_OverhealToBarrier), 2);
-                return;
-            }
-            c.Emit(OpCodes.Ldloc, modifiedHealingLoc);
-            c.EmitDelegate<Action<float>>((modifiedHealing) =>
-            {
-                modifiedHealingCache = modifiedHealing;
-            });
-
-            //where healing gets added to barrier, we reverse . this is the only match/hook that does anything
-            bool b3 = c.TryGotoNext(MoveType.Before,
-                x => x.MatchCallOrCallvirt<HealthComponent>(nameof(HealthComponent.AddBarrier))
-                )
-                && c.TryGotoPrev(MoveType.After, 
-                x => x.MatchLdloc(modifiedHealingLoc)
-                );
-            if (!b3)
-            {
-                DebugBreakpoint(nameof(HealthComponent_Heal_OverhealToBarrier), 3);
-                return;
-            }
-
-            c.EmitDelegate<Func<float, float>>((healingRemainder) =>
-            {
-                if (healingRemainder == 0 || modifiedHealingCache == 0 || AegisRevertHealingReduction.Value == false)
-                    return healingRemainder;
-
-                //if healing wasnt cut into health, skip the math
-                if (healingRemainder == modifiedHealingCache)
-                    return incomingHealingCache;
-
-                float healingCompFactor = incomingHealingCache / modifiedHealingCache;
-                if (healingCompFactor <= 1)
-                    return healingRemainder;
-
-                return healingRemainder * healingCompFactor;
-            });
         }
 
         private static void HealthComponent_ServerFixedUpdate_CumulateBarrierDecay(ILContext il)
@@ -179,7 +99,7 @@ namespace BadItemAcademy
             c.Emit(OpCodes.Ldarg_0);
             c.EmitDelegate<Action<HealthComponent>>((self) =>
             {
-                if (self.itemCounts.barrierOnOverHeal > 0 && NetworkServer.active && AegisUseFortification.Value == true)
+                if (self.itemCounts.barrierOnOverHeal > 0 && NetworkServer.active && AegisFortificationEnabled == true)
                 {
                     AegisItemBehavior aegisItemBehavior = self.body.GetComponent<AegisItemBehavior>();
                     if (aegisItemBehavior != null && aegisItemBehavior.stack > 0)
@@ -209,8 +129,7 @@ namespace BadItemAcademy
         {
             if (BadItemAcademyPlugin.AegisFortificationEnabled == false)
                 return;
-            if(AegisUseFortification.Value == true)
-                body?.healthComponent?.AddOnTakeDamageServerReceiver(this);
+            body?.healthComponent?.AddOnTakeDamageServerReceiver(this);
         }
         void OnDestroy()
         {

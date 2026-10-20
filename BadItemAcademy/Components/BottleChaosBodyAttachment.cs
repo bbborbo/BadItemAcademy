@@ -45,7 +45,7 @@ namespace BadItemAcademy.Components
 
         private void OnInventoryChangedGlobal(Inventory inv)
         {
-            if (attachedBody == null || inv.characterBody != attachedBody)
+            if (attachedBody == null || inv == null || inv.GetComponent<CharacterBody>() != attachedBody)
                 return;
             RecalculateEquipmentFireCounts();
         }
